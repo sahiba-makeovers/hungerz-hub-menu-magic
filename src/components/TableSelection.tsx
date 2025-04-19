@@ -7,9 +7,7 @@ import { QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const TableSelection = () => {
-  const { tableId, setTableId } = useOrder();
-
-  const tables = Array.from({ length: 10 }, (_, i) => i + 1);
+  const { tableId, setTableId, tables } = useOrder();
 
   const generateTableUrl = (tableId: number) => {
     // Create a complete URL with the table parameter
@@ -26,7 +24,7 @@ const TableSelection = () => {
     <div className="w-full max-w-4xl mx-auto p-4">
       <h2 className="text-2xl font-semibold text-hungerzblue mb-6 text-center">Select a Table</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        {tables.map((table) => (
+        {tables.sort((a, b) => a - b).map((table) => (
           <Button
             key={table}
             variant={tableId === table ? "default" : "outline"}

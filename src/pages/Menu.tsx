@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ShoppingCart, Home, Percent } from 'lucide-react';
 import Logo from '@/components/Logo';
 import Cart from '@/components/Cart';
-import { menuCategories, getMenuItemsByCategory } from '@/data/menuData';
+import { menuCategories } from '@/data/menuData';
 import CategorySection from '@/components/CategorySection';
 import { Badge } from '@/components/ui/badge';
 // Removed duplicate import of useOrder
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 const MenuContent = () => {
-  const { cart, tableId, applyCoupon, discount, couponCode } = useOrder();
+  const { cart, tableId, applyCoupon, discount, couponCode, menuItems } = useOrder();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [inputCoupon, setInputCoupon] = useState('');
@@ -27,6 +27,11 @@ const MenuContent = () => {
   const [notification, setNotification] = useState<string | null>(null);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Get menu items by category from OrderContext instead of menuData
+  const getMenuItemsByCategory = (categoryName: string) => {
+    return menuItems.filter(item => item.category === categoryName);
+  };
 
   // Handle URL table parameter
   useEffect(() => {
@@ -139,13 +144,17 @@ const MenuContent = () => {
         <CategoryNav />
 
         <div className="mt-8 space-y-10">
-          {menuCategories.map((category) => (
-            <CategorySection
-              key={category.id}
-              categoryName={category.displayName}
-              items={getMenuItemsByCategory(category.name)}
-            />
-          ))}
+          {menuCategories.map((category) => {
+            const items = getMenuItemsByCategory(category.name);
+            // Only render categories that have menu items
+            return items.length > 0 ? (
+              <CategorySection
+                key={category.id}
+                categoryName={category.displayName}
+                items={items}
+              />
+            ) : null;
+          })}
         </div>
       </div>
 
