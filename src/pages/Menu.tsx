@@ -10,7 +10,7 @@ import Cart from '@/components/Cart';
 import { menuCategories, getMenuItemsByCategory } from '@/data/menuData';
 import CategorySection from '@/components/CategorySection';
 import { Badge } from '@/components/ui/badge';
-import { useOrder } from '@/contexts/OrderContext';
+// Removed duplicate import of useOrder
 import CategoryNav from '@/components/CategoryNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
