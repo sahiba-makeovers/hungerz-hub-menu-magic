@@ -10,11 +10,14 @@ interface CategorySectionProps {
 
 const CategorySection: React.FC<CategorySectionProps> = ({ categoryName, items }) => {
   if (items.length === 0) return null;
+  
+  // Convert category name to a valid HTML id
+  const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
   return (
-    <div id={categoryName.toLowerCase().replace(' ', '-')} className="mb-8">
+    <div id={categoryId} className="mb-8 scroll-mt-32">
       <div className="mb-4">
-        <h2 className="category-label">{categoryName}</h2>
+        <h2 className="text-xl font-bold text-hungerzblue">{categoryName}</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (

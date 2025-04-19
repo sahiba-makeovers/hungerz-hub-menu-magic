@@ -25,16 +25,25 @@ const CategoryNav = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
+    // Run once to set initial active category
+    handleScroll();
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
+  // Function to scroll to selected category with offset
   const scrollToCategory = (categoryId: string) => {
     const element = document.getElementById(categoryId);
     if (element) {
+      // Calculate the offset for fixed header
+      const headerOffset = 120;
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - headerOffset;
+      
       window.scrollTo({
-        top: element.offsetTop - 100,
+        top: offsetPosition,
         behavior: 'smooth'
       });
       setActiveCategory(categoryId);

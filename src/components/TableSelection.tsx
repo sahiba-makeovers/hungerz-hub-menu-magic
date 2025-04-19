@@ -11,6 +11,17 @@ const TableSelection = () => {
 
   const tables = Array.from({ length: 10 }, (_, i) => i + 1);
 
+  const generateTableUrl = (tableId: number) => {
+    // Create a complete URL with the table parameter
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/menu?table=${tableId}`;
+  };
+
+  const openTableMenu = (tableId: number) => {
+    const url = generateTableUrl(tableId);
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
       <h2 className="text-2xl font-semibold text-hungerzblue mb-6 text-center">Select a Table</h2>
@@ -34,7 +45,7 @@ const TableSelection = () => {
               <h3 className="text-xl font-medium mb-4">QR Code for Table {tableId}</h3>
               <div className="p-3 bg-white rounded-lg shadow-md">
                 <QRCodeSVG
-                  value={`${window.location.origin}?table=${tableId}`}
+                  value={generateTableUrl(tableId)}
                   size={200}
                   bgColor={"#ffffff"}
                   fgColor={"#000000"}
@@ -48,10 +59,7 @@ const TableSelection = () => {
               <Button 
                 variant="outline" 
                 className="mt-4 flex items-center gap-2"
-                onClick={() => {
-                  const url = `${window.location.origin}?table=${tableId}`;
-                  window.open(url, '_blank');
-                }}
+                onClick={() => openTableMenu(tableId)}
               >
                 <QrCode size={16} />
                 Open Menu

@@ -24,17 +24,38 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [tableId, setTableId] = useState<number | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Initialize with table ID from URL if available
+  // Initialize with table ID from URL if available and localStorage
   useEffect(() => {
+    // First check URL parameter
     const params = new URLSearchParams(window.location.search);
     const tableParam = params.get('table');
+    
     if (tableParam) {
       const parsedTableId = parseInt(tableParam);
       if (!isNaN(parsedTableId) && parsedTableId >= 1 && parsedTableId <= 10) {
         setTableId(parsedTableId);
+        // Save to localStorage for persistence
+        localStorage.setItem('hungerzhub_tableId', parsedTableId.toString());
+        return;
+      }
+    }
+    
+    // If no URL param, try to get from localStorage
+    const storedTableId = localStorage.getItem('hungerzhub_tableId');
+    if (storedTableId) {
+      const parsedStoredId = parseInt(storedTableId);
+      if (!isNaN(parsedStoredId) && parsedStoredId >= 1 && parsedStoredId <= 10) {
+        setTableId(parsedStoredId);
       }
     }
   }, []);
+
+  // Update localStorage whenever tableId changes
+  useEffect(() => {
+    if (tableId) {
+      localStorage.setItem('hungerzhub_tableId', tableId.toString());
+    }
+  }, [tableId]);
 
   // Load orders from localStorage on mount
   useEffect(() => {
