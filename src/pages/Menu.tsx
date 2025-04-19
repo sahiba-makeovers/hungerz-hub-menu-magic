@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { OrderProvider } from '@/contexts/OrderContext';
+import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';

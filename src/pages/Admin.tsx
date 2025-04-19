@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,8 +14,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { menuCategories, getMenuItemsByCategory, MenuItem } from '@/data/menuData';
+import { menuCategories, getMenuItemsByCategory } from '@/data/menuData';
 import { useToast } from '@/hooks/use-toast';
+import { MenuItem } from '@/types';
 
 const tableFormSchema = z.object({
   tableNumber: z.string().refine(val => {
@@ -58,7 +58,6 @@ const AdminContent = () => {
     }
   });
 
-  // Check if admin is logged in
   useEffect(() => {
     const adminLoggedIn = localStorage.getItem('adminLoggedIn');
     if (adminLoggedIn !== 'true') {
