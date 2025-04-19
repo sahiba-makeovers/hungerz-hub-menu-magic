@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,10 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				hungerzblue: '#2E3192',
+				hungerzorange: '#F7941D',
+				hungerzcategory: '#FF1743',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
