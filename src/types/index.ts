@@ -35,3 +35,29 @@ export interface Coupon {
   discount: number;
   type: 'percentage';
 }
+
+// Add OrderContextType interface to ensure consistency between components
+export interface OrderContextType {
+  cart: CartItem[];
+  addToCart: (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => void;
+  updateCartItemQuantity: (itemId: string, newQuantity: number, variant?: 'half' | 'full') => void;
+  removeFromCart: (itemId: string, variant?: 'half' | 'full') => void;
+  clearCart: () => void;
+  tableId: number | null;
+  setTableId: (id: number) => void;
+  placeOrder: () => void;
+  orders: Order[];
+  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  getCartTotal: () => number;
+  
+  // Add missing properties
+  tables: number[];
+  addTable: (tableId: number) => void;
+  deleteTable: (tableId: number) => void;
+  menuItems: MenuItem[];
+  addMenuItem: (item: MenuItem) => void;
+  deleteMenuItem: (itemId: string) => void;
+  applyCoupon: (code: string) => { success: boolean; message: string };
+  discount: number;
+  couponCode: string | null;
+}
