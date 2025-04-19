@@ -1,20 +1,115 @@
 
-import React, { useState } from 'react';
-import { OrderProvider } from '@/contexts/OrderContext';
+import React, { useState, useEffect } from 'react';
+import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Info } from 'lucide-react';
+import { ArrowLeft, Info, Plus, Edit, Trash, Table } from 'lucide-react';
 import Logo from '@/components/Logo';
-import { useOrder } from '@/contexts/OrderContext';
 import OrderItem from '@/components/OrderItem';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { menuCategories, getMenuItemsByCategory, MenuItem } from '@/data/menuData';
+import { useToast } from '@/hooks/use-toast';
+
+const tableFormSchema = z.object({
+  tableNumber: z.string().refine(val => {
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0;
+  }, { message: "Please enter a valid table number" })
+});
+
+const menuItemFormSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  price: z.string().refine(val => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, { message: "Please enter a valid price" }),
+  category: z.string().min(1, { message: "Please select a category" }),
+  description: z.string().optional(),
+});
 
 const AdminContent = () => {
-  const { orders } = useOrder();
+  const { orders, tables, addTable, deleteTable, addMenuItem, deleteMenuItem, menuItems } = useOrder();
+  const [activeTab, setActiveTab] = useState("pending");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const tableForm = useForm<z.infer<typeof tableFormSchema>>({
+    resolver: zodResolver(tableFormSchema),
+    defaultValues: {
+      tableNumber: "",
+    }
+  });
+
+  const menuItemForm = useForm<z.infer<typeof menuItemFormSchema>>({
+    resolver: zodResolver(menuItemFormSchema),
+    defaultValues: {
+      name: "",
+      price: "",
+      category: "",
+      description: "",
+    }
+  });
+
+  // Check if admin is logged in
+  useEffect(() => {
+    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
+    if (adminLoggedIn !== 'true') {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const pendingOrders = orders.filter(order => order.status === 'PENDING');
   const cookingOrders = orders.filter(order => order.status === 'COOKING');
   const deliveredOrders = orders.filter(order => order.status === 'DELIVERED');
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminLoggedIn');
+    navigate('/login');
+  };
+
+  const onTableSubmit = (data: z.infer<typeof tableFormSchema>) => {
+    const tableNumber = parseInt(data.tableNumber);
+    if (tables.includes(tableNumber)) {
+      toast({
+        title: "Error",
+        description: `Table ${tableNumber} already exists`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addTable(tableNumber);
+    tableForm.reset();
+    toast({
+      title: "Success",
+      description: `Table ${tableNumber} has been added`,
+    });
+  };
+
+  const onMenuItemSubmit = (data: z.infer<typeof menuItemFormSchema>) => {
+    const newItem: MenuItem = {
+      id: `custom-${Date.now()}`,
+      name: data.name,
+      price: parseFloat(data.price),
+      category: data.category,
+      description: data.description || '',
+    };
+    
+    addMenuItem(newItem);
+    menuItemForm.reset();
+    toast({
+      title: "Success",
+      description: `${data.name} has been added to the menu`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -27,18 +122,20 @@ const AdminContent = () => {
             </Button>
           </Link>
           <Logo />
-          <div className="w-24"></div>
+          <Button variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
       </header>
 
       <main className="container mx-auto p-4 py-8 max-w-6xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-hungerzblue mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage orders and track restaurant activities</p>
+          <p className="text-gray-600">Manage orders, tables, and menu items</p>
         </div>
 
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6">
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-6">
             <TabsTrigger value="pending" className="relative">
               Pending
               {pendingOrders.length > 0 && (
@@ -56,6 +153,8 @@ const AdminContent = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="delivered">Delivered</TabsTrigger>
+            <TabsTrigger value="tables">Tables</TabsTrigger>
+            <TabsTrigger value="menu">Menu</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending">
@@ -104,6 +203,200 @@ const AdminContent = () => {
                 ))
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="tables">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Tables</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-6">
+                  <Form {...tableForm}>
+                    <form onSubmit={tableForm.handleSubmit(onTableSubmit)} className="flex flex-col sm:flex-row gap-4">
+                      <FormField
+                        control={tableForm.control}
+                        name="tableNumber"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter table number" 
+                                type="number" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="bg-hungerzblue hover:bg-hungerzblue/90">
+                        Add Table
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                  {tables.sort((a, b) => a - b).map((table) => (
+                    <Card key={table} className="relative">
+                      <CardContent className="flex flex-col items-center justify-center p-4">
+                        <Table size={24} className="mb-2 text-hungerzblue" />
+                        <p className="text-lg font-semibold">Table {table}</p>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="mt-2" 
+                          onClick={() => deleteTable(table)}
+                        >
+                          Remove
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="menu">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Menu Items</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="mb-6 bg-hungerzblue hover:bg-hungerzblue/90">
+                      <Plus size={16} className="mr-2" />
+                      Add Menu Item
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Menu Item</DialogTitle>
+                    </DialogHeader>
+                    <Form {...menuItemForm}>
+                      <form onSubmit={menuItemForm.handleSubmit(onMenuItemSubmit)} className="space-y-4">
+                        <FormField
+                          control={menuItemForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Item Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter item name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={menuItemForm.control}
+                          name="price"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Price</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter price" type="number" step="0.01" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={menuItemForm.control}
+                          name="category"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Category</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {menuCategories.map((category) => (
+                                    <SelectItem key={category.id} value={category.name}>
+                                      {category.displayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={menuItemForm.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter description" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <DialogFooter>
+                          <Button type="submit" className="w-full bg-hungerzblue hover:bg-hungerzblue/90">
+                            Add Item
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+
+                <div className="space-y-6">
+                  {menuCategories.map((category) => {
+                    const itemsInCategory = menuItems.filter(item => item.category === category.name);
+                    if (itemsInCategory.length === 0) return null;
+                    
+                    return (
+                      <div key={category.id} className="border rounded-lg p-4">
+                        <h3 className="font-bold text-hungerzblue text-lg mb-4">{category.displayName}</h3>
+                        <div className="divide-y">
+                          {itemsInCategory.map((item) => (
+                            <div key={item.id} className="py-3 flex justify-between items-center">
+                              <div>
+                                <h4 className="font-medium">{item.name}</h4>
+                                {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
+                                <p className="text-hungerzorange">
+                                  ₹{typeof item.price === 'object' 
+                                    ? `${item.price.half} (Half) / ₹${item.price.full} (Full)` 
+                                    : item.price}
+                                </p>
+                              </div>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => {
+                                  deleteMenuItem(item.id);
+                                  toast({
+                                    title: "Item deleted",
+                                    description: `${item.name} has been removed from the menu`
+                                  });
+                                }}
+                              >
+                                <Trash size={16} />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>

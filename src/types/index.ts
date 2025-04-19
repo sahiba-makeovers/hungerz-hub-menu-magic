@@ -29,3 +29,9 @@ export type MenuCategory = {
   name: string;
   displayName: string;
 };
+
+export interface Coupon {
+  code: string;
+  discount: number;
+  type: 'percentage';
+}

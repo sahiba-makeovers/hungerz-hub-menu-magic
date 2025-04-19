@@ -71,9 +71,9 @@ const Index = () => {
                 <p className="text-gray-600 mb-4">
                   Manage incoming orders, update order statuses, and keep track of all restaurant activities.
                 </p>
-                <Link to="/admin" className="mt-auto">
+                <Link to="/login" className="mt-auto">
                   <Button className="bg-green-600 hover:bg-green-700">
-                    Admin Dashboard
+                    Admin Login
                   </Button>
                 </Link>
               </CardContent>
