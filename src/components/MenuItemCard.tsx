@@ -31,43 +31,45 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item }) => {
     return (
       <div className="flex justify-between items-center mt-2">
         <span className="text-lg font-semibold">₹{price}</span>
-        {!currentItemInCart ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-hungerzorange text-white border-hungerzorange hover:bg-hungerzorange/90"
-            onClick={() => addToCart(item, 1, variant)}
-          >
-            <Plus size={16} />
-            Add
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-4"> {/* Added margin here */}
+          {!currentItemInCart ? (
             <Button
               variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => {
-                if (currentItemInCart.quantity === 1) {
-                  removeFromCart(item.id, variant);
-                } else {
-                  updateCartItemQuantity(item.id, currentItemInCart.quantity - 1, variant);
-                }
-              }}
+              size="sm"
+              className="bg-hungerzorange text-white border-hungerzorange hover:bg-hungerzorange/90"
+              onClick={() => addToCart(item, 1, variant)}
             >
-              <Minus size={14} />
+              <Plus size={16} />
+              Add
             </Button>
-            <span className="w-6 text-center">{currentItemInCart.quantity}</span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => updateCartItemQuantity(item.id, currentItemInCart.quantity + 1, variant)}
-            >
-              <Plus size={14} />
-            </Button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  if (currentItemInCart.quantity === 1) {
+                    removeFromCart(item.id, variant);
+                  } else {
+                    updateCartItemQuantity(item.id, currentItemInCart.quantity - 1, variant);
+                  }
+                }}
+              >
+                <Minus size={14} />
+              </Button>
+              <span className="w-6 text-center">{currentItemInCart.quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => updateCartItemQuantity(item.id, currentItemInCart.quantity + 1, variant)}
+              >
+                <Plus size={14} />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
   };

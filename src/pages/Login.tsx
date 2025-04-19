@@ -87,7 +87,7 @@ const Login = () => {
               
               <div className="flex items-start gap-3">
                 <Phone className="text-hungerzorange min-w-6" size={24} />
-                <p className="text-gray-700">+91 98765 43210</p>
+                <p className="text-gray-700">+91 80923 00100</p>
               </div>
               
               <div className="flex items-start gap-3">
@@ -167,6 +167,10 @@ const Login = () => {
       <footer className="bg-hungerzblue text-white py-4 mt-10">
         <div className="container mx-auto text-center">
           <p>© 2025 Hungerz Hub - The taste what you want...</p>
+          <div className="mt-2 text-sm">
+            <span>Contact: +91 80923 00100 | </span>
+            <span>Address: Mid Town Plaza, Jind, Haryana</span>
+          </div>
         </div>
       </footer>
     </div>

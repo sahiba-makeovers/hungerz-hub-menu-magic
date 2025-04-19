@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { OrderProvider } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
@@ -299,6 +298,15 @@ const Index = () => {
               
               <div className="grid grid-cols-2 gap-8 text-center md:text-left">
                 <div>
+                  <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
+                  <ul className="space-y-2">
+                    <li>📍 Mid Town Plaza, 12, Safidon Gate</li>
+                    <li>📱 +91 80923 00100</li>
+                    <li>🌐 www.hungerzhub.com</li>
+                  </ul>
+                </div>
+                
+                <div>
                   <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
                   <ul className="space-y-2">
                     <li><Link to="/" className="hover:text-hungerzorange transition-colors">Home</Link></li>
@@ -307,20 +315,11 @@ const Index = () => {
                     <li><Link to="/login" className="hover:text-hungerzorange transition-colors">Admin</Link></li>
                   </ul>
                 </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
-                  <ul className="space-y-2">
-                    <li>123 Food Street, Culinary District</li>
-                    <li>Phone: +91 98765 43210</li>
-                    <li>Email: info@hungerzhub.com</li>
-                  </ul>
-                </div>
               </div>
             </div>
             
             <div className="border-t border-white/20 mt-8 pt-8 text-center">
-              <p>© 2025 Hungerz Hub - The taste what you want...</p>
+              <p>© 2025 Hungerz Hub - Jind, Haryana | The taste what you want...</p>
             </div>
           </div>
         </footer>
