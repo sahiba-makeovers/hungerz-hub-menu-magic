@@ -355,6 +355,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateOrderStatus,
         getCartTotal,
         tables,
+        setTables,
         addTable,
         deleteTable,
         menuItems,
