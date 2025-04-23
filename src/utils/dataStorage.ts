@@ -1,5 +1,6 @@
 
 import { MenuItem, Order } from '@/types';
+import { menuItems as initialMenuItems } from '@/data/menuData';
 
 // Base URLs for the data files
 const BASE_API_URL = 'https://www.techshubh.com/api';
@@ -73,7 +74,6 @@ export const getInitialTables = (): number[] => {
 };
 
 export const getInitialMenuItems = (): MenuItem[] => {
-  // Import from menuData to prevent duplication
-  const { menuItems } = require('@/data/menuData');
-  return menuItems;
+  // Use directly imported menuItems instead of require
+  return initialMenuItems;
 };
