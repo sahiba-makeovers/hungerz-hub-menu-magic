@@ -10,9 +10,8 @@ const TableSelection = () => {
   const { tableId, setTableId, tables } = useOrder();
 
   const generateTableUrl = (tableId: number) => {
-    // Create a complete URL with the table parameter
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/menu?table=${tableId}`;
+    // Use absolute URL with correct domain
+    return `${window.location.protocol}//${window.location.host}/menu?table=${tableId}`;
   };
 
   const openTableMenu = (tableId: number) => {
@@ -54,14 +53,19 @@ const TableSelection = () => {
               <p className="mt-4 text-sm text-gray-600">
                 Scan this code to access the menu on Table {tableId}
               </p>
-              <Button 
-                variant="outline" 
-                className="mt-4 flex items-center gap-2"
-                onClick={() => openTableMenu(tableId)}
-              >
-                <QrCode size={16} />
-                Open Menu
-              </Button>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs text-gray-500 text-center">
+                  QR code URL: {generateTableUrl(tableId)}
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={() => openTableMenu(tableId)}
+                >
+                  <QrCode size={16} />
+                  Open Menu
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -60,4 +60,5 @@ export interface OrderContextType {
   applyCoupon: (code: string) => { success: boolean; message: string };
   discount: number;
   couponCode: string | null;
+  isLoading: boolean;
 }

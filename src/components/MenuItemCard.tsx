@@ -31,19 +31,19 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item }) => {
     return (
       <div className="flex justify-between items-center mt-2">
         <span className="text-lg font-semibold">₹{price}</span>
-        <div className="flex items-center gap-2 ml-4"> {/* Added margin here */}
+        <div className="flex items-center gap-2 ml-4"> 
           {!currentItemInCart ? (
             <Button
               variant="outline"
               size="sm"
-              className="bg-hungerzorange text-white border-hungerzorange hover:bg-hungerzorange/90"
+              className="bg-hungerzorange text-white border-hungerzorange hover:bg-hungerzorange/90 ml-3"
               onClick={() => addToCart(item, 1, variant)}
             >
-              <Plus size={16} />
+              <Plus size={16} className="mr-1" />
               Add
             </Button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-3">
               <Button
                 variant="outline"
                 size="icon"

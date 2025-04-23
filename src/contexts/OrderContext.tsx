@@ -3,6 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
 import { toast } from 'sonner';
 import { menuItems as initialMenuItems } from '@/data/menuData';
+import { 
+  fetchTables, saveTables, 
+  fetchMenuItems, saveMenuItems,
+  fetchOrders, saveOrders,
+  getInitialTables, getInitialMenuItems
+} from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
@@ -10,10 +16,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cart, setCart] = useState<CartItem[]>([]);
   const [tableId, setTableId] = useState<number | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [tables, setTables] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [tables, setTables] = useState<number[]>(getInitialTables());
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(getInitialMenuItems());
   const [discount, setDiscount] = useState<number>(0);
   const [couponCode, setCouponCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Define available coupons
   const availableCoupons: Coupon[] = [
@@ -21,7 +28,40 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     { code: 'PRINCE10', discount: 10, type: 'percentage' },
   ];
 
-  // Initialize with table ID from URL if available and localStorage
+  // Load data from API on mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch tables first
+        const apiTables = await fetchTables();
+        if (apiTables && apiTables.length > 0) {
+          setTables(apiTables);
+        }
+
+        // Fetch menu items
+        const apiMenuItems = await fetchMenuItems();
+        if (apiMenuItems && apiMenuItems.length > 0) {
+          setMenuItems(apiMenuItems);
+        }
+
+        // Fetch orders
+        const apiOrders = await fetchOrders();
+        if (apiOrders && apiOrders.length > 0) {
+          setOrders(apiOrders);
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        toast.error("Failed to load data. Using cached data instead.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Initialize with table ID from URL if available
   useEffect(() => {
     // First check URL parameter
     const params = new URLSearchParams(window.location.search);
@@ -54,36 +94,32 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [tableId]);
 
-  // Load orders, tables, and menuItems from localStorage on mount
+  // Save orders whenever they change
   useEffect(() => {
-    const storedOrders = localStorage.getItem('hungerzhub_orders');
-    if (storedOrders) {
-      setOrders(JSON.parse(storedOrders));
+    if (!isLoading && orders.length > 0) {
+      saveOrders(orders).catch(error => 
+        console.error("Failed to save orders:", error)
+      );
     }
-    
-    const storedTables = localStorage.getItem('hungerzhub_tables');
-    if (storedTables) {
-      setTables(JSON.parse(storedTables));
-    }
-    
-    const storedMenuItems = localStorage.getItem('hungerzhub_menuItems');
-    if (storedMenuItems) {
-      setMenuItems(JSON.parse(storedMenuItems));
-    }
-  }, []);
+  }, [orders, isLoading]);
 
-  // Save orders, tables, and menuItems to localStorage whenever they change
+  // Save tables whenever they change
   useEffect(() => {
-    localStorage.setItem('hungerzhub_orders', JSON.stringify(orders));
-  }, [orders]);
+    if (!isLoading && tables.length > 0) {
+      saveTables(tables).catch(error => 
+        console.error("Failed to save tables:", error)
+      );
+    }
+  }, [tables, isLoading]);
   
+  // Save menuItems whenever they change
   useEffect(() => {
-    localStorage.setItem('hungerzhub_tables', JSON.stringify(tables));
-  }, [tables]);
-  
-  useEffect(() => {
-    localStorage.setItem('hungerzhub_menuItems', JSON.stringify(menuItems));
-  }, [menuItems]);
+    if (!isLoading && menuItems.length > 0) {
+      saveMenuItems(menuItems).catch(error => 
+        console.error("Failed to save menu items:", error)
+      );
+    }
+  }, [menuItems, isLoading]);
 
   const addToCart = (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => {
     setCart((prevCart) => {
@@ -261,7 +297,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setTableId,
         updateOrderStatus,
         getCartTotal,
-        // Add new properties
         tables,
         addTable,
         deleteTable,
@@ -271,6 +306,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         applyCoupon,
         discount,
         couponCode,
+        isLoading,
       }}
     >
       {children}
