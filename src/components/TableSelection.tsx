@@ -1,22 +1,66 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode } from 'lucide-react';
+import { QrCode, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 const TableSelection = () => {
   const { tableId, setTableId, tables } = useOrder();
+  const [downloadQR, setDownloadQR] = useState<boolean>(false);
 
   const generateTableUrl = (tableId: number) => {
-    // Use absolute URL with correct domain
-    return `${window.location.protocol}//${window.location.host}/menu?table=${tableId}`;
+    const baseUrl = window.location.origin;
+    
+    if (baseUrl.includes('lovable.app') || baseUrl.includes('lovableproject.com')) {
+      return `https://www.techshubh.com/menu?table=${tableId}`;
+    }
+    
+    return `${baseUrl}/menu?table=${tableId}`;
   };
 
   const openTableMenu = (tableId: number) => {
     const url = generateTableUrl(tableId);
     window.open(url, '_blank');
+  };
+
+  const downloadQRCode = () => {
+    if (!tableId) {
+      toast.error("Please select a table first");
+      return;
+    }
+
+    try {
+      setDownloadQR(true);
+      
+      setTimeout(() => {
+        const canvas = document.getElementById('qr-canvas') as HTMLCanvasElement;
+        if (!canvas) {
+          toast.error("Error generating QR code");
+          setDownloadQR(false);
+          return;
+        }
+        
+        const pngUrl = canvas
+          .toDataURL("image/png")
+          .replace("image/png", "image/octet-stream");
+        
+        const downloadLink = document.createElement("a");
+        downloadLink.href = pngUrl;
+        downloadLink.download = `table-${tableId}-qr.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        toast.success(`QR code for Table ${tableId} downloaded`);
+        setDownloadQR(false);
+      }, 300);
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      toast.error("Failed to download QR code");
+      setDownloadQR(false);
+    }
   };
 
   return (
@@ -42,6 +86,7 @@ const TableSelection = () => {
               <h3 className="text-xl font-medium mb-4">QR Code for Table {tableId}</h3>
               <div className="p-3 bg-white rounded-lg shadow-md">
                 <QRCodeSVG
+                  id="qr-canvas"
                   value={generateTableUrl(tableId)}
                   size={200}
                   bgColor={"#ffffff"}
@@ -57,14 +102,25 @@ const TableSelection = () => {
                 <p className="text-xs text-gray-500 text-center">
                   QR code URL: {generateTableUrl(tableId)}
                 </p>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2"
-                  onClick={() => openTableMenu(tableId)}
-                >
-                  <QrCode size={16} />
-                  Open Menu
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={() => openTableMenu(tableId)}
+                  >
+                    <QrCode size={16} />
+                    Open Menu
+                  </Button>
+                  <Button 
+                    variant="default"
+                    className="flex items-center gap-2 bg-hungerzblue hover:bg-hungerzblue/90"
+                    onClick={downloadQRCode}
+                    disabled={downloadQR}
+                  >
+                    <Download size={16} />
+                    {downloadQR ? 'Processing...' : 'Download QR'}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

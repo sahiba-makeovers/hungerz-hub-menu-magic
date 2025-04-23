@@ -50,15 +50,22 @@ export interface OrderContextType {
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   getCartTotal: () => number;
   
-  // Add missing properties
+  // Tables management
   tables: number[];
+  setTables: (tables: number[]) => void;
   addTable: (tableId: number) => void;
   deleteTable: (tableId: number) => void;
+  
+  // Menu management
   menuItems: MenuItem[];
   addMenuItem: (item: MenuItem) => void;
   deleteMenuItem: (itemId: string) => void;
+  
+  // Coupon management
   applyCoupon: (code: string) => { success: boolean; message: string };
   discount: number;
   couponCode: string | null;
+  
+  // Loading state
   isLoading: boolean;
 }

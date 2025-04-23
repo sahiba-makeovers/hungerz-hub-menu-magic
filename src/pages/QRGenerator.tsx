@@ -1,14 +1,41 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import Logo from '@/components/Logo';
 import TableSelection from '@/components/TableSelection';
+import { toast } from 'sonner';
+import { clearCache, fetchTables } from '@/utils/dataStorage';
 
 const QRGeneratorContent = () => {
-  const { isLoading } = useOrder();
+  const { isLoading, tables, setTables } = useOrder();
+
+  // Function to refresh tables data
+  const refreshTablesData = async () => {
+    try {
+      toast.info("Refreshing tables data...");
+      clearCache(); // Clear cache to force fresh data
+      const freshTables = await fetchTables();
+      if (freshTables && freshTables.length > 0) {
+        setTables(freshTables);
+        toast.success("Tables data refreshed successfully");
+      } else {
+        toast.error("No tables data available");
+      }
+    } catch (error) {
+      console.error("Error refreshing tables:", error);
+      toast.error("Failed to refresh tables data");
+    }
+  };
+
+  // Refresh data when the component is loaded
+  useEffect(() => {
+    if (!isLoading) {
+      refreshTablesData();
+    }
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,7 +48,15 @@ const QRGeneratorContent = () => {
             </Button>
           </Link>
           <Logo />
-          <div className="w-24"></div>
+          <Button 
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={refreshTablesData}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw size={16} />}
+            Refresh
+          </Button>
         </div>
       </header>
       

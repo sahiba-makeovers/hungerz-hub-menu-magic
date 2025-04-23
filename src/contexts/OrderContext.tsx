@@ -1,13 +1,12 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
 import { toast } from 'sonner';
-import { menuItems as initialMenuItems } from '@/data/menuData';
 import { 
   fetchTables, saveTables, 
   fetchMenuItems, saveMenuItems,
   fetchOrders, saveOrders,
-  getInitialTables, getInitialMenuItems
+  getInitialTables, getInitialMenuItems,
+  clearCache
 } from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -21,6 +20,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [discount, setDiscount] = useState<number>(0);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [dataInitialized, setDataInitialized] = useState<boolean>(false);
 
   // Define available coupons
   const availableCoupons: Coupon[] = [
@@ -28,38 +28,44 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     { code: 'PRINCE10', discount: 10, type: 'percentage' },
   ];
 
+  // Function to refresh all data from API
+  const refreshAllData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Clear cache to force fresh data
+      clearCache();
+      
+      // Fetch tables
+      const apiTables = await fetchTables();
+      if (apiTables && apiTables.length > 0) {
+        setTables(apiTables);
+      }
+
+      // Fetch menu items
+      const apiMenuItems = await fetchMenuItems();
+      if (apiMenuItems && apiMenuItems.length > 0) {
+        setMenuItems(apiMenuItems);
+      }
+
+      // Fetch orders
+      const apiOrders = await fetchOrders();
+      if (apiOrders && apiOrders.length > 0) {
+        setOrders(apiOrders);
+      }
+      
+      setDataInitialized(true);
+    } catch (error) {
+      console.error("Failed to refresh data:", error);
+      toast.error("Failed to refresh data from server. Some features may not work properly.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Load data from API on mount
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch tables first
-        const apiTables = await fetchTables();
-        if (apiTables && apiTables.length > 0) {
-          setTables(apiTables);
-        }
-
-        // Fetch menu items
-        const apiMenuItems = await fetchMenuItems();
-        if (apiMenuItems && apiMenuItems.length > 0) {
-          setMenuItems(apiMenuItems);
-        }
-
-        // Fetch orders
-        const apiOrders = await fetchOrders();
-        if (apiOrders && apiOrders.length > 0) {
-          setOrders(apiOrders);
-        }
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        toast.error("Failed to load data. Using cached data instead.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+    refreshAllData();
+  }, [refreshAllData]);
 
   // Initialize with table ID from URL if available
   useEffect(() => {
@@ -96,30 +102,33 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Save orders whenever they change
   useEffect(() => {
-    if (!isLoading && orders.length > 0) {
+    if (dataInitialized && orders.length > 0) {
+      console.log("Saving updated orders:", orders);
       saveOrders(orders).catch(error => 
         console.error("Failed to save orders:", error)
       );
     }
-  }, [orders, isLoading]);
+  }, [orders, dataInitialized]);
 
   // Save tables whenever they change
   useEffect(() => {
-    if (!isLoading && tables.length > 0) {
+    if (dataInitialized && tables.length > 0) {
+      console.log("Saving updated tables:", tables);
       saveTables(tables).catch(error => 
         console.error("Failed to save tables:", error)
       );
     }
-  }, [tables, isLoading]);
+  }, [tables, dataInitialized]);
   
   // Save menuItems whenever they change
   useEffect(() => {
-    if (!isLoading && menuItems.length > 0) {
+    if (dataInitialized && menuItems.length > 0) {
+      console.log("Saving updated menu items:", menuItems);
       saveMenuItems(menuItems).catch(error => 
         console.error("Failed to save menu items:", error)
       );
     }
-  }, [menuItems, isLoading]);
+  }, [menuItems, dataInitialized]);
 
   const addToCart = (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => {
     setCart((prevCart) => {
@@ -219,7 +228,15 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       totalAmount: getDiscountedTotal(),
     };
 
-    setOrders((prevOrders) => [...prevOrders, newOrder]);
+    setOrders((prevOrders) => {
+      const updatedOrders = [...prevOrders, newOrder];
+      // Save orders to JSON immediately to prevent data loss
+      saveOrders(updatedOrders).catch(error => 
+        console.error("Failed to save new order:", error)
+      );
+      return updatedOrders;
+    });
+    
     clearCart();
     // Reset discount after order is placed
     setDiscount(0);
@@ -229,12 +246,19 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateOrderStatus = (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
     setOrders((prevOrders) => {
-      return prevOrders.map((order) => {
+      const updatedOrders = prevOrders.map((order) => {
         if (order.id === orderId) {
           return { ...order, status };
         }
         return order;
       });
+      
+      // Save updated orders immediately
+      saveOrders(updatedOrders).catch(error => 
+        console.error("Failed to update order status:", error)
+      );
+      
+      return updatedOrders;
     });
     toast.success(`Order status updated to ${status}`);
   };
@@ -245,23 +269,56 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast.error(`Table ${tableId} already exists`);
       return;
     }
-    setTables(prev => [...prev, tableId].sort((a, b) => a - b));
+    
+    setTables(prev => {
+      const updatedTables = [...prev, tableId].sort((a, b) => a - b);
+      // Save updated tables immediately
+      saveTables(updatedTables).catch(error => 
+        console.error("Failed to save new table:", error)
+      );
+      return updatedTables;
+    });
+    
     toast.success(`Table ${tableId} added successfully`);
   };
 
   const deleteTable = (tableId: number) => {
-    setTables(prev => prev.filter(id => id !== tableId));
+    setTables(prev => {
+      const updatedTables = prev.filter(id => id !== tableId);
+      // Save updated tables immediately
+      saveTables(updatedTables).catch(error => 
+        console.error("Failed to delete table:", error)
+      );
+      return updatedTables;
+    });
+    
     toast.success(`Table ${tableId} removed successfully`);
   };
 
   // Add menu item management
   const addMenuItem = (item: MenuItem) => {
-    setMenuItems(prev => [...prev, item]);
+    setMenuItems(prev => {
+      const updatedMenuItems = [...prev, item];
+      // Save updated menu items immediately
+      saveMenuItems(updatedMenuItems).catch(error => 
+        console.error("Failed to save new menu item:", error)
+      );
+      return updatedMenuItems;
+    });
+    
     toast.success(`${item.name} added to menu successfully`);
   };
 
   const deleteMenuItem = (itemId: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== itemId));
+    setMenuItems(prev => {
+      const updatedMenuItems = prev.filter(item => item.id !== itemId);
+      // Save updated menu items immediately
+      saveMenuItems(updatedMenuItems).catch(error => 
+        console.error("Failed to delete menu item:", error)
+      );
+      return updatedMenuItems;
+    });
+    
     toast.success(`Menu item removed successfully`);
   };
 

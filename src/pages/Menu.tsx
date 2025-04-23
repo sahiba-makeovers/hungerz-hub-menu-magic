@@ -4,24 +4,25 @@ import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { ShoppingCart, Home, Percent } from 'lucide-react';
+import { ShoppingCart, Home, Percent, RefreshCw, Loader2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import Cart from '@/components/Cart';
 import { menuCategories } from '@/data/menuData';
 import CategorySection from '@/components/CategorySection';
 import { Badge } from '@/components/ui/badge';
-// Removed duplicate import of useOrder
 import CategoryNav from '@/components/CategoryNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { clearCache, fetchMenuItems } from '@/utils/dataStorage';
 
 const MenuContent = () => {
-  const { cart, tableId, applyCoupon, discount, couponCode, menuItems } = useOrder();
+  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, setTables } = useOrder();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [inputCoupon, setInputCoupon] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [notification, setNotification] = useState<string | null>(null);
@@ -50,6 +51,47 @@ const MenuContent = () => {
       return () => clearTimeout(timer);
     }
   }, [tableId]);
+
+  // Function to refresh menu data
+  const refreshMenuData = async () => {
+    try {
+      setRefreshing(true);
+      toast({
+        title: "Refreshing menu",
+        description: "Fetching the latest menu items..."
+      });
+      
+      clearCache(); // Clear cache to force fresh data
+      const freshMenuItems = await fetchMenuItems();
+      if (freshMenuItems && freshMenuItems.length > 0) {
+        // The context will be updated automatically
+        toast({
+          title: "Menu refreshed",
+          description: "Menu items updated successfully"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "No menu data available",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing menu:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh menu data",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Refresh menu data when component mounts
+  useEffect(() => {
+    refreshMenuData();
+  }, []);
 
   const handleApplyCoupon = () => {
     if (inputCoupon.trim() === '') {
@@ -88,6 +130,19 @@ const MenuContent = () => {
           </Link>
           <Logo />
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size={isMobile ? "icon" : "default"}
+              className={`text-hungerzblue border-hungerzblue ${refreshing ? 'opacity-70' : ''}`}
+              onClick={refreshMenuData}
+              disabled={refreshing}
+            >
+              {refreshing ? 
+                <Loader2 className="h-4 w-4 animate-spin" /> : 
+                <RefreshCw size={isMobile ? 20 : 16} />
+              }
+              {!isMobile && <span className="ml-2">Refresh</span>}
+            </Button>
             <Button 
               variant="outline" 
               size={isMobile ? "icon" : "default"}
@@ -144,17 +199,24 @@ const MenuContent = () => {
         <CategoryNav />
 
         <div className="mt-8 space-y-10">
-          {menuCategories.map((category) => {
-            const items = getMenuItemsByCategory(category.name);
-            // Only render categories that have menu items
-            return items.length > 0 ? (
-              <CategorySection
-                key={category.id}
-                categoryName={category.displayName}
-                items={items}
-              />
-            ) : null;
-          })}
+          {refreshing ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-hungerzblue" />
+              <p className="mt-4 text-gray-600">Refreshing menu data...</p>
+            </div>
+          ) : (
+            menuCategories.map((category) => {
+              const items = getMenuItemsByCategory(category.name);
+              // Only render categories that have menu items
+              return items.length > 0 ? (
+                <CategorySection
+                  key={category.id}
+                  categoryName={category.displayName}
+                  items={items}
+                />
+              ) : null;
+            })
+          )}
         </div>
       </div>
 
