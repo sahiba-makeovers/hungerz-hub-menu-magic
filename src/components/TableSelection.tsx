@@ -3,31 +3,36 @@ import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode, Download } from 'lucide-react';
+import { QrCode, Download, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
-import { fetchTables } from '@/utils/dataStorage';
+import { fetchTables, forceRefresh } from '@/utils/dataStorage';
 
 const TableSelection = () => {
-  const { tableId, setTableId, tables } = useOrder();
+  const { tableId, setTableId, tables, setTables } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
-  const [localTables, setLocalTables] = useState<number[]>(tables || []);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Ensure we have the latest tables data
   useEffect(() => {
-    const refreshTables = async () => {
-      try {
-        const freshTables = await fetchTables();
-        if (freshTables && freshTables.length > 0) {
-          setLocalTables(freshTables);
-        }
-      } catch (error) {
-        console.error("Error refreshing tables in TableSelection:", error);
+    refreshTablesData();
+  }, []);
+
+  const refreshTablesData = async () => {
+    setRefreshing(true);
+    try {
+      const freshTables = await fetchTables();
+      if (freshTables && freshTables.length > 0) {
+        setTables(freshTables);
+        console.log("Tables refreshed:", freshTables);
       }
-    };
-    
-    refreshTables();
-  }, [tables]);
+    } catch (error) {
+      console.error("Error refreshing tables in TableSelection:", error);
+      toast.error("Failed to refresh tables data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const generateTableUrl = (tableId: number) => {
     const baseUrl = window.location.origin;
@@ -84,9 +89,24 @@ const TableSelection = () => {
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
-      <h2 className="text-2xl font-semibold text-hungerzblue mb-6 text-center">Select a Table</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-hungerzblue">Select a Table</h2>
+        <Button 
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2 text-hungerzblue"
+          onClick={refreshTablesData}
+          disabled={refreshing}
+        >
+          {refreshing ? 
+            <RefreshCw className="h-4 w-4 animate-spin" /> : 
+            <RefreshCw className="h-4 w-4" />}
+          Refresh Tables
+        </Button>
+      </div>
+      
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        {localTables.sort((a, b) => a - b).map((table) => (
+        {tables.sort((a, b) => a - b).map((table) => (
           <Button
             key={table}
             variant={tableId === table ? "default" : "outline"}

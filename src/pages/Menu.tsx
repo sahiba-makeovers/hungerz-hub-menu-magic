@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
@@ -59,6 +60,8 @@ const MenuContent = () => {
         title: "Refreshing menu",
         description: "Fetching the latest menu items..."
       });
+      
+      clearCache(); // Clear cache to force fresh data
       
       // Complete data refresh
       await forceRefresh();

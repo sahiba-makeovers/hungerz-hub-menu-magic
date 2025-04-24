@@ -6,7 +6,7 @@ import {
   fetchMenuItems, saveMenuItems,
   fetchOrders, saveOrders,
   getInitialTables, getInitialMenuItems,
-  clearCache
+  clearCache, forceRefresh
 } from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -69,7 +69,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Initialize with table ID from URL if available
   useEffect(() => {
-    // First check URL parameter
+    // Check URL parameter
     const params = new URLSearchParams(window.location.search);
     const tableParam = params.get('table');
     
@@ -77,28 +77,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const parsedTableId = parseInt(tableParam);
       if (!isNaN(parsedTableId) && parsedTableId >= 1) {
         setTableId(parsedTableId);
-        // Save to localStorage for persistence
-        localStorage.setItem('hungerzhub_tableId', parsedTableId.toString());
         return;
       }
     }
-    
-    // If no URL param, try to get from localStorage
-    const storedTableId = localStorage.getItem('hungerzhub_tableId');
-    if (storedTableId) {
-      const parsedStoredId = parseInt(storedTableId);
-      if (!isNaN(parsedStoredId)) {
-        setTableId(parsedStoredId);
-      }
-    }
   }, []);
-
-  // Update localStorage whenever tableId changes
-  useEffect(() => {
-    if (tableId) {
-      localStorage.setItem('hungerzhub_tableId', tableId.toString());
-    }
-  }, [tableId]);
 
   // Save orders whenever they change
   useEffect(() => {
@@ -230,7 +212,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setOrders((prevOrders) => {
       const updatedOrders = [...prevOrders, newOrder];
-      // Save orders to JSON immediately to prevent data loss
+      // Save orders to server immediately
       saveOrders(updatedOrders).catch(error => 
         console.error("Failed to save new order:", error)
       );
