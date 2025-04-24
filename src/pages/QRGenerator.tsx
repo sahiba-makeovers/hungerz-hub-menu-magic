@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -7,19 +7,24 @@ import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import Logo from '@/components/Logo';
 import TableSelection from '@/components/TableSelection';
 import { toast } from 'sonner';
-import { clearCache, fetchTables, forceRefresh } from '@/utils/dataStorage';
+import { fetchTables, forceRefresh, getCurrentCacheState } from '@/utils/dataStorage';
 
 const QRGeneratorContent = () => {
   const { isLoading, tables, setTables } = useOrder();
+  const [refreshing, setRefreshing] = useState(false);
 
   // Function to refresh tables data
   const refreshTablesData = async () => {
     try {
+      setRefreshing(true);
       toast.info("Refreshing tables data...");
-      clearCache(); // Clear cache to force fresh data
-      const freshTables = await fetchTables();
+      
+      // Force fresh data fetch
+      const freshTables = await fetchTables(true);
+      
       if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
+        console.log("Tables refreshed:", freshTables);
         toast.success("Tables data refreshed successfully");
       } else {
         toast.error("No tables data available");
@@ -27,23 +32,33 @@ const QRGeneratorContent = () => {
     } catch (error) {
       console.error("Error refreshing tables:", error);
       toast.error("Failed to refresh tables data");
+    } finally {
+      setRefreshing(false);
     }
   };
 
   // Full data refresh function
   const fullRefresh = async () => {
     try {
+      setRefreshing(true);
       toast.info("Refreshing all data...");
-      await forceRefresh();
-      // Fetch fresh tables specifically for this component
-      const freshTables = await fetchTables();
-      if (freshTables && freshTables.length > 0) {
+      
+      const success = await forceRefresh();
+      
+      if (success) {
+        // Fetch fresh tables specifically for this component
+        const freshTables = await fetchTables(true);
         setTables(freshTables);
+        console.log("Cache state after refresh:", getCurrentCacheState());
+        toast.success("All data refreshed successfully");
+      } else {
+        toast.error("Failed to refresh some data");
       }
-      toast.success("All data refreshed successfully");
     } catch (error) {
       console.error("Error during full refresh:", error);
       toast.error("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -69,9 +84,9 @@ const QRGeneratorContent = () => {
             variant="outline"
             className="flex items-center gap-2"
             onClick={fullRefresh}
-            disabled={isLoading}
+            disabled={refreshing}
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw size={16} />}
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw size={16} />}
             Refresh
           </Button>
         </div>
@@ -85,13 +100,13 @@ const QRGeneratorContent = () => {
           </p>
         </div>
         
-        {isLoading ? (
+        {isLoading || refreshing ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-hungerzblue" />
             <p className="mt-4 text-gray-600">Loading tables data...</p>
           </div>
         ) : (
-          <TableSelection />
+          <TableSelection onRefresh={refreshTablesData} />
         )}
         
         <div className="mt-10 max-w-md mx-auto">

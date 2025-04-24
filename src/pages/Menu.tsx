@@ -15,10 +15,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { clearCache, fetchMenuItems, forceRefresh } from '@/utils/dataStorage';
+import { fetchMenuItems, getCurrentCacheState } from '@/utils/dataStorage';
 
 const MenuContent = () => {
-  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, setTables } = useOrder();
+  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems } = useOrder();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [inputCoupon, setInputCoupon] = useState('');
@@ -29,7 +29,7 @@ const MenuContent = () => {
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Get menu items by category from OrderContext instead of menuData
+  // Get menu items by category from OrderContext
   const getMenuItemsByCategory = (categoryName: string) => {
     return menuItems.filter(item => item.category === categoryName);
   };
@@ -40,7 +40,7 @@ const MenuContent = () => {
     const tableParam = params.get('table');
     
     if (tableParam && !tableId) {
-      // If there's a table parameter but no tableId set yet, display a welcome notification
+      // Display a welcome notification
       setNotification(`Welcome to Table ${tableParam}! Browse our menu and place your order.`);
       
       // Hide notification after 5 seconds
@@ -61,10 +61,10 @@ const MenuContent = () => {
         description: "Fetching the latest menu items..."
       });
       
-      clearCache(); // Clear cache to force fresh data
+      // Use the refreshMenuItems function from OrderContext
+      await refreshMenuItems();
       
-      // Complete data refresh
-      await forceRefresh();
+      console.log("Cache state after menu refresh:", getCurrentCacheState());
       
       toast({
         title: "Menu refreshed",
@@ -197,6 +197,16 @@ const MenuContent = () => {
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-hungerzblue" />
               <p className="mt-4 text-gray-600">Refreshing menu data...</p>
+            </div>
+          ) : menuItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <p className="text-gray-600">No menu items available.</p>
+              <Button 
+                onClick={refreshMenuData} 
+                className="mt-4 bg-hungerzblue hover:bg-hungerzblue/90"
+              >
+                Refresh Menu
+              </Button>
             </div>
           ) : (
             menuCategories.map((category) => {

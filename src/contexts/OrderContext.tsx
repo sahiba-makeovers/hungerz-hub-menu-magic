@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
 import { toast } from 'sonner';
@@ -6,7 +7,8 @@ import {
   fetchMenuItems, saveMenuItems,
   fetchOrders, saveOrders,
   getInitialTables, getInitialMenuItems,
-  clearCache, forceRefresh
+  clearCache, forceRefresh,
+  getCurrentCacheState
 } from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -36,29 +38,60 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearCache();
       
       // Fetch tables
-      const apiTables = await fetchTables();
+      const apiTables = await fetchTables(true);
       if (apiTables && apiTables.length > 0) {
         setTables(apiTables);
       }
 
       // Fetch menu items
-      const apiMenuItems = await fetchMenuItems();
+      const apiMenuItems = await fetchMenuItems(true);
       if (apiMenuItems && apiMenuItems.length > 0) {
         setMenuItems(apiMenuItems);
       }
 
       // Fetch orders
-      const apiOrders = await fetchOrders();
+      const apiOrders = await fetchOrders(true);
       if (apiOrders && apiOrders.length > 0) {
         setOrders(apiOrders);
       }
       
       setDataInitialized(true);
+      console.log("All data refreshed, cache state:", getCurrentCacheState());
     } catch (error) {
       console.error("Failed to refresh data:", error);
       toast.error("Failed to refresh data from server. Some features may not work properly.");
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Function to refresh only menu items
+  const refreshMenuItems = useCallback(async () => {
+    try {
+      const apiMenuItems = await fetchMenuItems(true);
+      if (apiMenuItems && apiMenuItems.length > 0) {
+        setMenuItems(apiMenuItems);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to refresh menu items:", error);
+      return false;
+    }
+  }, []);
+
+  // Function to refresh only orders
+  const refreshOrders = useCallback(async () => {
+    try {
+      const apiOrders = await fetchOrders(true);
+      if (apiOrders && apiOrders.length > 0) {
+        setOrders(apiOrders);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to refresh orders:", error);
+      return false;
     }
   }, []);
 
@@ -190,7 +223,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return total;
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!tableId) {
       toast.error('Please select a table before placing an order');
       return;
@@ -210,98 +243,158 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       totalAmount: getDiscountedTotal(),
     };
 
-    setOrders((prevOrders) => {
-      const updatedOrders = [...prevOrders, newOrder];
-      // Save orders to server immediately
-      saveOrders(updatedOrders).catch(error => 
-        console.error("Failed to save new order:", error)
-      );
-      return updatedOrders;
-    });
-    
-    clearCart();
-    // Reset discount after order is placed
-    setDiscount(0);
-    setCouponCode(null);
-    toast.success('Order placed successfully');
-  };
-
-  const updateOrderStatus = (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
-    setOrders((prevOrders) => {
-      const updatedOrders = prevOrders.map((order) => {
-        if (order.id === orderId) {
-          return { ...order, status };
-        }
-        return order;
+    try {
+      // First refresh to get latest orders
+      await refreshOrders();
+      
+      // Then add the new order
+      setOrders((prevOrders) => {
+        const updatedOrders = [...prevOrders, newOrder];
+        
+        // Save orders to server immediately
+        saveOrders(updatedOrders).catch(error => 
+          console.error("Failed to save new order:", error)
+        );
+        
+        return updatedOrders;
       });
       
-      // Save updated orders immediately
-      saveOrders(updatedOrders).catch(error => 
-        console.error("Failed to update order status:", error)
-      );
+      clearCart();
+      // Reset discount after order is placed
+      setDiscount(0);
+      setCouponCode(null);
+      toast.success('Order placed successfully');
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error('Failed to place order. Please try again.');
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
+    try {
+      // First refresh to get latest orders
+      await refreshOrders();
       
-      return updatedOrders;
-    });
-    toast.success(`Order status updated to ${status}`);
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.map((order) => {
+          if (order.id === orderId) {
+            return { ...order, status };
+          }
+          return order;
+        });
+        
+        // Save updated orders immediately
+        saveOrders(updatedOrders).catch(error => 
+          console.error("Failed to update order status:", error)
+        );
+        
+        return updatedOrders;
+      });
+      
+      toast.success(`Order status updated to ${status}`);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast.error('Failed to update order status. Please try again.');
+    }
   };
 
   // Add table management
-  const addTable = (tableId: number) => {
-    if (tables.includes(tableId)) {
-      toast.error(`Table ${tableId} already exists`);
-      return;
+  const addTable = async (tableId: number) => {
+    try {
+      // First refresh to get latest tables
+      const freshTables = await fetchTables(true);
+      
+      if (freshTables.includes(tableId)) {
+        toast.error(`Table ${tableId} already exists`);
+        return;
+      }
+      
+      setTables(prev => {
+        const updatedTables = [...prev, tableId].sort((a, b) => a - b);
+        
+        // Save updated tables immediately
+        saveTables(updatedTables).catch(error => 
+          console.error("Failed to save new table:", error)
+        );
+        
+        return updatedTables;
+      });
+      
+      toast.success(`Table ${tableId} added successfully`);
+    } catch (error) {
+      console.error("Error adding table:", error);
+      toast.error('Failed to add table. Please try again.');
     }
-    
-    setTables(prev => {
-      const updatedTables = [...prev, tableId].sort((a, b) => a - b);
-      // Save updated tables immediately
-      saveTables(updatedTables).catch(error => 
-        console.error("Failed to save new table:", error)
-      );
-      return updatedTables;
-    });
-    
-    toast.success(`Table ${tableId} added successfully`);
   };
 
-  const deleteTable = (tableId: number) => {
-    setTables(prev => {
-      const updatedTables = prev.filter(id => id !== tableId);
-      // Save updated tables immediately
-      saveTables(updatedTables).catch(error => 
-        console.error("Failed to delete table:", error)
-      );
-      return updatedTables;
-    });
-    
-    toast.success(`Table ${tableId} removed successfully`);
+  const deleteTable = async (tableId: number) => {
+    try {
+      // First refresh to get latest tables
+      await fetchTables(true);
+      
+      setTables(prev => {
+        const updatedTables = prev.filter(id => id !== tableId);
+        
+        // Save updated tables immediately
+        saveTables(updatedTables).catch(error => 
+          console.error("Failed to delete table:", error)
+        );
+        
+        return updatedTables;
+      });
+      
+      toast.success(`Table ${tableId} removed successfully`);
+    } catch (error) {
+      console.error("Error removing table:", error);
+      toast.error('Failed to remove table. Please try again.');
+    }
   };
 
   // Add menu item management
-  const addMenuItem = (item: MenuItem) => {
-    setMenuItems(prev => {
-      const updatedMenuItems = [...prev, item];
-      // Save updated menu items immediately
-      saveMenuItems(updatedMenuItems).catch(error => 
-        console.error("Failed to save new menu item:", error)
-      );
-      return updatedMenuItems;
-    });
-    
-    toast.success(`${item.name} added to menu successfully`);
+  const addMenuItem = async (item: MenuItem) => {
+    try {
+      // First refresh to get latest menu items
+      await refreshMenuItems();
+      
+      setMenuItems(prev => {
+        const updatedMenuItems = [...prev, item];
+        
+        // Save updated menu items immediately
+        saveMenuItems(updatedMenuItems).catch(error => 
+          console.error("Failed to save new menu item:", error)
+        );
+        
+        return updatedMenuItems;
+      });
+      
+      toast.success(`${item.name} added to menu successfully`);
+    } catch (error) {
+      console.error("Error adding menu item:", error);
+      toast.error('Failed to add menu item. Please try again.');
+    }
   };
 
-  const deleteMenuItem = (itemId: string) => {
-    setMenuItems(prev => {
-      const updatedMenuItems = prev.filter(item => item.id !== itemId);
-      // Save updated menu items immediately
-      saveMenuItems(updatedMenuItems).catch(error => 
-        console.error("Failed to delete menu item:", error)
-      );
-      return updatedMenuItems;
-    });
-    
-    toast.success(`Menu item removed successfully`);
+  const deleteMenuItem = async (itemId: string) => {
+    try {
+      // First refresh to get latest menu items
+      await refreshMenuItems();
+      
+      setMenuItems(prev => {
+        const updatedMenuItems = prev.filter(item => item.id !== itemId);
+        
+        // Save updated menu items immediately
+        saveMenuItems(updatedMenuItems).catch(error => 
+          console.error("Failed to delete menu item:", error)
+        );
+        
+        return updatedMenuItems;
+      });
+      
+      toast.success(`Menu item removed successfully`);
+    } catch (error) {
+      console.error("Error removing menu item:", error);
+      toast.error('Failed to remove menu item. Please try again.');
+    }
   };
 
   // Add coupon management
@@ -347,6 +440,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         discount,
         couponCode,
         isLoading,
+        refreshMenuItems,
+        refreshOrders,
+        refreshAllData
       }}
     >
       {children}

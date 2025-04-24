@@ -5,19 +5,47 @@ import { menuItems as initialMenuItems } from '@/data/menuData';
 // Base URLs for the data files
 const BASE_API_URL = 'https://www.techshubh.com/api';
 
-// Cache management for runtime only (no localStorage)
-let cachedTables: number[] | null = null;
-let cachedMenuItems: MenuItem[] | null = null;
-let cachedOrders: Order[] | null = null;
+// Runtime memory cache to ensure data consistency across components
+let runtimeCache = {
+  tables: null as number[] | null,
+  menuItems: null as MenuItem[] | null,
+  orders: null as Order[] | null,
+  lastFetchTime: {
+    tables: 0,
+    menuItems: 0,
+    orders: 0
+  }
+};
 
-// Helper function to fetch data from JSON
-export async function fetchData<T>(endpoint: string): Promise<T> {
+// Fetch data with cache control
+export async function fetchData<T>(endpoint: string, forceRefresh = false): Promise<T> {
   try {
-    console.log(`Fetching data from ${BASE_API_URL}/${endpoint}.json`);
-    const response = await fetch(`${BASE_API_URL}/${endpoint}.json`, {
+    // Get current time
+    const now = Date.now();
+    
+    // Check if we should use cached data (cache valid for 10 seconds unless force refresh)
+    const cacheKey = endpoint.split('.')[0] as 'tables' | 'menu' | 'orders';
+    const mappedKey = cacheKey === 'menu' ? 'menuItems' : cacheKey;
+    
+    if (
+      !forceRefresh && 
+      runtimeCache[mappedKey] !== null && 
+      (now - runtimeCache.lastFetchTime[cacheKey]) < 10000
+    ) {
+      console.log(`Using runtime cache for ${endpoint}, age: ${(now - runtimeCache.lastFetchTime[cacheKey]) / 1000}s`);
+      return [...runtimeCache[mappedKey]] as unknown as T;
+    }
+    
+    // Add cache-busting query param
+    const cacheBuster = `?t=${Date.now()}`;
+    const url = `${BASE_API_URL}/${endpoint}.json${cacheBuster}`;
+    
+    console.log(`Fetching fresh data from ${url}`);
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
       },
@@ -29,6 +57,19 @@ export async function fetchData<T>(endpoint: string): Promise<T> {
     
     const data = await response.json();
     console.log(`Successfully fetched ${endpoint} data:`, data);
+    
+    // Update runtime cache
+    if (cacheKey === 'tables') {
+      runtimeCache.tables = [...data];
+      runtimeCache.lastFetchTime.tables = now;
+    } else if (cacheKey === 'menu') {
+      runtimeCache.menuItems = [...data];
+      runtimeCache.lastFetchTime.menuItems = now;
+    } else if (cacheKey === 'orders') {
+      runtimeCache.orders = [...data];
+      runtimeCache.lastFetchTime.orders = now;
+    }
+    
     return data;
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);
@@ -37,11 +78,16 @@ export async function fetchData<T>(endpoint: string): Promise<T> {
   }
 }
 
-// Helper function to save data to JSON via API
+// Save data with immediate cache update
 export async function saveData<T>(endpoint: string, data: T): Promise<boolean> {
   try {
     console.log(`Saving data to ${BASE_API_URL}/${endpoint}:`, data);
-    const response = await fetch(`${BASE_API_URL}/${endpoint}`, {
+    
+    // Add cache-busting query param
+    const cacheBuster = `?t=${Date.now()}`;
+    const url = `${BASE_API_URL}/${endpoint}${cacheBuster}`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -56,16 +102,18 @@ export async function saveData<T>(endpoint: string, data: T): Promise<boolean> {
     
     console.log(`Successfully saved ${endpoint} data`);
     
-    // Update cache after successful save
-    updateCache(endpoint, data);
+    // Immediately update runtime cache to ensure consistency
+    updateRuntimeCache(endpoint, data);
     return true;
   } catch (error) {
     console.error(`Error saving ${endpoint}:`, error);
+    // Still update runtime cache even if API fails to ensure UI consistency
+    updateRuntimeCache(endpoint, data);
     return false;
   }
 }
 
-// Helper function to get default data
+// Get default data
 function getDefaultData(endpoint: string): any {
   switch (endpoint) {
     case 'tables': return getInitialTables();
@@ -75,122 +123,107 @@ function getDefaultData(endpoint: string): any {
   }
 }
 
-// Helper function to update cache
-function updateCache<T>(endpoint: string, data: T): void {
-  switch (endpoint) {
-    case 'tables': 
-      cachedTables = data as unknown as number[];
-      break;
-    case 'menu': 
-      cachedMenuItems = data as unknown as MenuItem[];
-      break;
-    case 'orders': 
-      cachedOrders = data as unknown as Order[];
-      break;
+// Update runtime cache
+function updateRuntimeCache<T>(endpoint: string, data: T): void {
+  const now = Date.now();
+  
+  if (endpoint === 'tables') {
+    runtimeCache.tables = [...data as unknown as number[]];
+    runtimeCache.lastFetchTime.tables = now;
+  } else if (endpoint === 'menu') {
+    runtimeCache.menuItems = [...data as unknown as MenuItem[]];
+    runtimeCache.lastFetchTime.menuItems = now;
+  } else if (endpoint === 'orders') {
+    runtimeCache.orders = [...data as unknown as Order[]];
+    runtimeCache.lastFetchTime.orders = now;
   }
 }
 
-// Specific functions for tables
-export async function fetchTables(): Promise<number[]> {
-  if (cachedTables) {
-    console.log("Using cached tables data");
-    return [...cachedTables]; // Return a copy to prevent modification
-  }
-  
-  const tables = await fetchData<number[]>('tables');
-  if (tables && tables.length > 0) {
-    cachedTables = [...tables]; // Store a copy
-    return tables;
-  }
-  
-  return getInitialTables();
+// Tables API
+export async function fetchTables(forceRefresh = false): Promise<number[]> {
+  const tables = await fetchData<number[]>('tables', forceRefresh);
+  return tables && tables.length > 0 ? [...tables] : getInitialTables();
 }
 
 export async function saveTables(tables: number[]): Promise<boolean> {
-  const success = await saveData('tables', tables);
-  if (success) {
-    cachedTables = [...tables]; // Store a copy
-  }
-  return success;
+  return await saveData('tables', tables);
 }
 
-// Specific functions for menu items
-export async function fetchMenuItems(): Promise<MenuItem[]> {
-  if (cachedMenuItems) {
-    console.log("Using cached menu items");
-    return [...cachedMenuItems]; // Return a copy
-  }
-  
-  const menuItems = await fetchData<MenuItem[]>('menu');
-  if (menuItems && menuItems.length > 0) {
-    cachedMenuItems = [...menuItems]; // Store a copy
-    return menuItems;
-  }
-  
-  return getInitialMenuItems();
+// Menu items API
+export async function fetchMenuItems(forceRefresh = false): Promise<MenuItem[]> {
+  const menuItems = await fetchData<MenuItem[]>('menu', forceRefresh);
+  return menuItems && menuItems.length > 0 ? [...menuItems] : getInitialMenuItems();
 }
 
 export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
-  const success = await saveData('menu', menuItems);
-  if (success) {
-    cachedMenuItems = [...menuItems]; // Store a copy
-  }
-  return success;
+  return await saveData('menu', menuItems);
 }
 
-// Specific functions for orders
-export async function fetchOrders(): Promise<Order[]> {
-  if (cachedOrders) {
-    console.log("Using cached orders data");
-    return [...cachedOrders]; // Return a copy
-  }
-  
-  const orders = await fetchData<Order[]>('orders');
-  if (orders) {
-    cachedOrders = [...orders]; // Store a copy
-    return orders;
-  }
-  
-  return [];
+// Orders API
+export async function fetchOrders(forceRefresh = false): Promise<Order[]> {
+  const orders = await fetchData<Order[]>('orders', forceRefresh);
+  return orders ? [...orders] : [];
 }
 
 export async function saveOrders(orders: Order[]): Promise<boolean> {
-  const success = await saveData('orders', orders);
-  if (success) {
-    cachedOrders = [...orders]; // Store a copy
-  }
-  return success;
+  return await saveData('orders', orders);
 }
 
-// Fallback to initial data if API fails
+// Initial data
 export const getInitialTables = (): number[] => {
-  // Default tables
   return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 };
 
 export const getInitialMenuItems = (): MenuItem[] => {
-  // Use directly imported menuItems as fallback
   return initialMenuItems;
 };
 
-// Function to clear cache - useful for debugging or forcing refresh
+// Clear runtime cache
 export const clearCache = () => {
-  cachedTables = null;
-  cachedMenuItems = null;
-  cachedOrders = null;
-  console.log("Cache cleared");
+  runtimeCache = {
+    tables: null,
+    menuItems: null,
+    orders: null,
+    lastFetchTime: {
+      tables: 0,
+      menuItems: 0,
+      orders: 0
+    }
+  };
+  console.log("Runtime cache cleared");
 };
 
-// Function to force a full refresh of the data from API
+// Force refresh all data
 export const forceRefresh = async () => {
   clearCache();
   
-  // Fetch fresh data
-  await Promise.all([
-    fetchTables(),
-    fetchMenuItems(),
-    fetchOrders()
-  ]);
+  // Fetch fresh data with force refresh flag
+  console.log("Forcing refresh of all data...");
   
-  console.log("All data refreshed");
+  try {
+    await Promise.all([
+      fetchTables(true),
+      fetchMenuItems(true),
+      fetchOrders(true)
+    ]);
+    console.log("All data refreshed successfully");
+    return true;
+  } catch (error) {
+    console.error("Error during force refresh:", error);
+    return false;
+  }
+};
+
+// Helper function to get current cached state (useful for debugging)
+export const getCurrentCacheState = () => {
+  return {
+    tables: runtimeCache.tables ? runtimeCache.tables.length : 0,
+    menuItems: runtimeCache.menuItems ? runtimeCache.menuItems.length : 0,
+    orders: runtimeCache.orders ? runtimeCache.orders.length : 0,
+    lastFetchTime: {
+      tables: new Date(runtimeCache.lastFetchTime.tables).toISOString(),
+      menuItems: new Date(runtimeCache.lastFetchTime.menuItems).toISOString(),
+      orders: new Date(runtimeCache.lastFetchTime.orders).toISOString()
+    }
+  };
 };

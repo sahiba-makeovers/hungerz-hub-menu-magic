@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
@@ -6,25 +5,36 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QrCode, Download, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
-import { fetchTables, forceRefresh } from '@/utils/dataStorage';
+import { fetchTables } from '@/utils/dataStorage';
 
-const TableSelection = () => {
+interface TableSelectionProps {
+  onRefresh?: () => Promise<void>;
+}
+
+const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   const { tableId, setTableId, tables, setTables } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Ensure we have the latest tables data
   useEffect(() => {
-    refreshTablesData();
+    if (tables.length === 0) {
+      refreshTablesData();
+    }
   }, []);
 
   const refreshTablesData = async () => {
+    if (onRefresh) {
+      await onRefresh();
+      return;
+    }
+    
     setRefreshing(true);
     try {
-      const freshTables = await fetchTables();
+      const freshTables = await fetchTables(true);
       if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
-        console.log("Tables refreshed:", freshTables);
+        console.log("Tables refreshed in TableSelection:", freshTables);
       }
     } catch (error) {
       console.error("Error refreshing tables in TableSelection:", error);
@@ -105,18 +115,24 @@ const TableSelection = () => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        {tables.sort((a, b) => a - b).map((table) => (
-          <Button
-            key={table}
-            variant={tableId === table ? "default" : "outline"}
-            className={`h-16 text-lg ${tableId === table ? 'bg-hungerzblue text-white' : ''}`}
-            onClick={() => setTableId(table)}
-          >
-            Table {table}
-          </Button>
-        ))}
-      </div>
+      {tables.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No tables found. Please add tables in the Admin panel.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          {tables.sort((a, b) => a - b).map((table) => (
+            <Button
+              key={table}
+              variant={tableId === table ? "default" : "outline"}
+              className={`h-16 text-lg ${tableId === table ? 'bg-hungerzblue text-white' : ''}`}
+              onClick={() => setTableId(table)}
+            >
+              Table {table}
+            </Button>
+          ))}
+        </div>
+      )}
       
       {tableId && (
         <Card className="mt-8">
