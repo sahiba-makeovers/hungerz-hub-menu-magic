@@ -1,23 +1,20 @@
 
-export interface VariantPrice {
-  half: number;
-  full: number;
+// Adding to the existing types file
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number | { half: number; full: number };
+  category: string;
+  description?: string;
+  image?: string;
+  popular?: boolean;
 }
 
 export interface MenuCategory {
   id: string;
   name: string;
   displayName: string;
-}
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  price: number | VariantPrice;
-  category: string;
-  description?: string;
-  image?: string;
-  popular?: boolean;
 }
 
 export interface CartItem {
@@ -46,25 +43,31 @@ export interface OrderContextType {
   cart: CartItem[];
   tableId: number | null;
   orders: Order[];
+  tables: number[];
+  menuItems: MenuItem[];
+  isLoading: boolean;
+  discount: number;
+  couponCode: string | null;
+  
   addToCart: (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => void;
   removeFromCart: (itemId: string, variant?: 'half' | 'full') => void;
   updateCartItemQuantity: (itemId: string, quantity: number, variant?: 'half' | 'full') => void;
   clearCart: () => void;
-  placeOrder: () => void;
-  setTableId: React.Dispatch<React.SetStateAction<number | null>>;
-  updateOrderStatus: (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => void;
+  placeOrder: () => Promise<void>;
   getCartTotal: () => number;
-  tables: number[];
-  setTables: React.Dispatch<React.SetStateAction<number[]>>;
-  addTable: (tableId: number) => void;
-  deleteTable: (tableId: number) => void;
-  menuItems: MenuItem[];
-  addMenuItem: (item: MenuItem) => void;
-  deleteMenuItem: (itemId: string) => void;
+  
+  setTableId: (id: number) => void;
+  setTables: (tables: number[]) => void;
+  addTable: (tableId: number) => Promise<void>;
+  deleteTable: (tableId: number) => Promise<void>;
+  
+  addMenuItem: (item: MenuItem) => Promise<void>;
+  deleteMenuItem: (itemId: string) => Promise<void>;
+  
+  updateOrderStatus: (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => Promise<void>;
+  
   applyCoupon: (code: string) => { success: boolean; message: string };
-  discount: number;
-  couponCode: string | null;
-  isLoading: boolean;
+  
   refreshMenuItems: () => Promise<boolean>;
   refreshOrders: () => Promise<boolean>;
   refreshAllData: () => Promise<void>;

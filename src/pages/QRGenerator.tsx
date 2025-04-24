@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -14,7 +14,7 @@ const QRGeneratorContent = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Function to refresh tables data with enhanced reliability
-  const refreshTablesData = async () => {
+  const refreshTablesData = useCallback(async () => {
     try {
       setRefreshing(true);
       toast.info("Refreshing tables data...");
@@ -36,7 +36,7 @@ const QRGeneratorContent = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [setTables]);
 
   // Full data refresh function with enhanced reliability
   const fullRefresh = async () => {
@@ -67,7 +67,7 @@ const QRGeneratorContent = () => {
     if (!isLoading) {
       refreshTablesData();
     }
-  }, [isLoading]);
+  }, [isLoading, refreshTablesData]);
 
   return (
     <div className="min-h-screen bg-gray-50">

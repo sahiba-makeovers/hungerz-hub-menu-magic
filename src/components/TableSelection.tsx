@@ -16,6 +16,14 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   const { tableId, setTableId, tables, setTables } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [localTables, setLocalTables] = useState<number[]>([]);
+
+  // Initialize with tables from context
+  useEffect(() => {
+    if (tables && tables.length > 0) {
+      setLocalTables(tables);
+    }
+  }, [tables]);
 
   // Ensure we have the latest tables data
   useEffect(() => {
@@ -38,6 +46,7 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
       
       if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
+        setLocalTables(freshTables);
         console.log("Tables refreshed in TableSelection:", freshTables);
         console.log("Cache state after refresh:", getCurrentCacheState());
         toast.success("Tables data refreshed successfully");
@@ -123,13 +132,13 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
         </Button>
       </div>
       
-      {tables.length === 0 ? (
+      {localTables.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No tables found. Please add tables in the Admin panel.
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {tables.sort((a, b) => a - b).map((table) => (
+          {localTables.sort((a, b) => a - b).map((table) => (
             <Button
               key={table}
               variant={tableId === table ? "default" : "outline"}

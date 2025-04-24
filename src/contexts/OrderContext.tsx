@@ -32,7 +32,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ];
 
   // Function to refresh all data from API with improved reliability
-  const refreshAllData = useCallback(async () => {
+  const refreshAllData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
       // Clear cache to force fresh data
@@ -61,18 +61,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       setDataInitialized(true);
       console.log("All data refreshed, cache state:", getCurrentCacheState());
-      return true;
     } catch (error) {
       console.error("Failed to refresh data:", error);
       toast.error("Failed to refresh data. Using local data.");
-      return false;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   // Function to refresh only menu items with improved error handling
-  const refreshMenuItems = useCallback(async () => {
+  const refreshMenuItems = useCallback(async (): Promise<boolean> => {
     try {
       const apiMenuItems = await fetchMenuItems(true);
       if (apiMenuItems && apiMenuItems.length > 0) {
@@ -88,7 +86,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Function to refresh only orders with improved error handling
-  const refreshOrders = useCallback(async () => {
+  const refreshOrders = useCallback(async (): Promise<boolean> => {
     try {
       const apiOrders = await fetchOrders(true);
       if (apiOrders) {
@@ -300,17 +298,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest orders
       await refreshOrders();
       
-      // Then add the new order
-      setOrders(prevOrders => {
-        const updatedOrders = [...prevOrders, newOrder];
-        
-        // Save orders to server immediately
-        saveOrders(updatedOrders).catch(error => 
-          console.error("Failed to save new order:", error)
-        );
-        
-        return updatedOrders;
-      });
+      // Then add the new order to both state and storage
+      const updatedOrders = [...orders, newOrder];
+      setOrders(updatedOrders);
+      
+      // Save orders to server immediately
+      try {
+        await saveOrders(updatedOrders);
+      } catch (error) {
+        console.error("Failed to save new order:", error);
+        toast.error('Order saved locally but not synced to server. Please try refreshing.');
+      }
       
       clearCart();
       // Reset discount after order is placed
@@ -328,23 +326,25 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest orders
       await refreshOrders();
       
-      setOrders(prevOrders => {
-        const updatedOrders = prevOrders.map(order => {
-          if (order.id === orderId) {
-            return { ...order, status };
-          }
-          return order;
-        });
-        
-        // Save updated orders immediately
-        saveOrders(updatedOrders).catch(error => 
-          console.error("Failed to update order status:", error)
-        );
-        
-        return updatedOrders;
+      // Update the order in state
+      const updatedOrders = orders.map(order => {
+        if (order.id === orderId) {
+          return { ...order, status };
+        }
+        return order;
       });
       
-      toast.success(`Order status updated to ${status}`);
+      // Update state immediately
+      setOrders(updatedOrders);
+      
+      // Save updated orders
+      try {
+        await saveOrders(updatedOrders);
+        toast.success(`Order status updated to ${status}`);
+      } catch (error) {
+        console.error("Failed to update order status:", error);
+        toast.error('Status updated locally but not synced to server. Please refresh.');
+      }
     } catch (error) {
       console.error("Error updating order status:", error);
       toast.error('Failed to update order status. Please try again.');
@@ -362,18 +362,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
-      setTables(prev => {
-        const updatedTables = [...prev, tableId].sort((a, b) => a - b);
-        
-        // Save updated tables immediately
-        saveTables(updatedTables).catch(error => 
-          console.error("Failed to save new table:", error)
-        );
-        
-        return updatedTables;
-      });
+      // Update state immediately
+      const updatedTables = [...tables, tableId].sort((a, b) => a - b);
+      setTables(updatedTables);
       
-      toast.success(`Table ${tableId} added successfully`);
+      // Save updated tables
+      try {
+        await saveTables(updatedTables);
+        toast.success(`Table ${tableId} added successfully`);
+      } catch (error) {
+        console.error("Failed to save new table:", error);
+        toast.error('Table added locally but not synced to server. Please refresh.');
+      }
     } catch (error) {
       console.error("Error adding table:", error);
       toast.error('Failed to add table. Please try again.');
@@ -385,18 +385,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest tables
       await fetchTables(true);
       
-      setTables(prev => {
-        const updatedTables = prev.filter(id => id !== tableId);
-        
-        // Save updated tables immediately
-        saveTables(updatedTables).catch(error => 
-          console.error("Failed to delete table:", error)
-        );
-        
-        return updatedTables;
-      });
+      // Update state immediately
+      const updatedTables = tables.filter(id => id !== tableId);
+      setTables(updatedTables);
       
-      toast.success(`Table ${tableId} removed successfully`);
+      // Save updated tables
+      try {
+        await saveTables(updatedTables);
+        toast.success(`Table ${tableId} removed successfully`);
+      } catch (error) {
+        console.error("Failed to delete table:", error);
+        toast.error('Table removed locally but not synced to server. Please refresh.');
+      }
     } catch (error) {
       console.error("Error removing table:", error);
       toast.error('Failed to remove table. Please try again.');
@@ -409,18 +409,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest menu items
       await refreshMenuItems();
       
-      setMenuItems(prev => {
-        const updatedMenuItems = [...prev, item];
-        
-        // Save updated menu items immediately
-        saveMenuItems(updatedMenuItems).catch(error => 
-          console.error("Failed to save new menu item:", error)
-        );
-        
-        return updatedMenuItems;
-      });
+      // Update state immediately
+      const updatedMenuItems = [...menuItems, item];
+      setMenuItems(updatedMenuItems);
       
-      toast.success(`${item.name} added to menu successfully`);
+      // Save updated menu items
+      try {
+        await saveMenuItems(updatedMenuItems);
+        toast.success(`${item.name} added to menu successfully`);
+      } catch (error) {
+        console.error("Failed to save new menu item:", error);
+        toast.error('Menu item added locally but not synced to server. Please refresh.');
+      }
     } catch (error) {
       console.error("Error adding menu item:", error);
       toast.error('Failed to add menu item. Please try again.');
@@ -432,18 +432,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest menu items
       await refreshMenuItems();
       
-      setMenuItems(prev => {
-        const updatedMenuItems = prev.filter(item => item.id !== itemId);
-        
-        // Save updated menu items immediately
-        saveMenuItems(updatedMenuItems).catch(error => 
-          console.error("Failed to delete menu item:", error)
-        );
-        
-        return updatedMenuItems;
-      });
+      // Update state immediately
+      const updatedMenuItems = menuItems.filter(item => item.id !== itemId);
+      setMenuItems(updatedMenuItems);
       
-      toast.success(`Menu item removed successfully`);
+      // Save updated menu items
+      try {
+        await saveMenuItems(updatedMenuItems);
+        toast.success(`Menu item removed successfully`);
+      } catch (error) {
+        console.error("Failed to delete menu item:", error);
+        toast.error('Menu item removed locally but not synced to server. Please refresh.');
+      }
     } catch (error) {
       console.error("Error removing menu item:", error);
       toast.error('Failed to remove menu item. Please try again.');

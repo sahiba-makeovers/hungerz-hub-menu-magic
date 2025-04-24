@@ -5,6 +5,13 @@ import { menuItems as initialMenuItems } from '@/data/menuData';
 // Base URLs for the data files
 const BASE_API_URL = 'https://www.techshubh.com/api';
 
+// Local Storage Keys
+const LOCAL_STORAGE_KEYS = {
+  TABLES: 'hungerz-tables',
+  MENU_ITEMS: 'hungerz-menu-items',
+  ORDERS: 'hungerz-orders',
+};
+
 // Runtime memory cache with last fetch timestamps and data versions
 const runtimeCache = {
   tables: null as number[] | null,
@@ -22,7 +29,7 @@ const runtimeCache = {
   }
 };
 
-// Enhanced fetch with automatic retry and better caching
+// Enhanced fetch with automatic retry, better caching, and local storage fallback
 export async function fetchData<T>(endpoint: string, forceRefresh = false): Promise<T> {
   try {
     const now = Date.now();
@@ -87,14 +94,17 @@ export async function fetchData<T>(endpoint: string, forceRefresh = false): Prom
         runtimeCache.tables = [...data];
         runtimeCache.lastFetchTime.tables = now;
         runtimeCache.dataVersion.tables++;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.TABLES, JSON.stringify(data));
       } else if (cacheKey === 'menu') {
         runtimeCache.menuItems = [...data];
         runtimeCache.lastFetchTime.menuItems = now;
         runtimeCache.dataVersion.menuItems++;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.MENU_ITEMS, JSON.stringify(data));
       } else if (cacheKey === 'orders') {
         runtimeCache.orders = [...data];
         runtimeCache.lastFetchTime.orders = now;
         runtimeCache.dataVersion.orders++;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(data));
       }
       
       return JSON.parse(JSON.stringify(data)) as T;
@@ -104,15 +114,50 @@ export async function fetchData<T>(endpoint: string, forceRefresh = false): Prom
     }
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);
-    // Return default values if API fails, but don't update cache
+    // Try to get data from localStorage if API fails
+    const localData = getLocalStorageData(endpoint);
+    if (localData) {
+      console.log(`Using localStorage data for ${endpoint}`);
+      return localData as T;
+    }
+    // Fall back to default values if both API and localStorage fail
     return getDefaultData(endpoint) as unknown as T;
   }
 }
 
-// Enhanced save with optimistic updates and background sync
+// Get data from localStorage
+function getLocalStorageData(endpoint: string): any {
+  try {
+    if (endpoint === 'tables') {
+      const data = localStorage.getItem(LOCAL_STORAGE_KEYS.TABLES);
+      return data ? JSON.parse(data) : null;
+    } else if (endpoint === 'menu') {
+      const data = localStorage.getItem(LOCAL_STORAGE_KEYS.MENU_ITEMS);
+      return data ? JSON.parse(data) : null;
+    } else if (endpoint === 'orders') {
+      const data = localStorage.getItem(LOCAL_STORAGE_KEYS.ORDERS);
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
+  } catch (e) {
+    console.error(`Error reading from localStorage for ${endpoint}:`, e);
+    return null;
+  }
+}
+
+// Enhanced save with optimistic updates, background sync, and localStorage fallback
 export async function saveData<T>(endpoint: string, data: T): Promise<boolean> {
   try {
     console.log(`Saving data to ${BASE_API_URL}/${endpoint}:`, data);
+    
+    // Save to localStorage first for reliability
+    if (endpoint === 'tables') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.TABLES, JSON.stringify(data));
+    } else if (endpoint === 'menu') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.MENU_ITEMS, JSON.stringify(data));
+    } else if (endpoint === 'orders') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(data));
+    }
     
     // Immediately update runtime cache for optimistic UI updates
     updateRuntimeCache(endpoint, data);
@@ -190,60 +235,105 @@ function updateRuntimeCache<T>(endpoint: string, data: T): void {
   }
 }
 
-// Tables API with improved error handling
+// Tables API with improved error handling and localStorage fallback
 export async function fetchTables(forceRefresh = false): Promise<number[]> {
   try {
     const tables = await fetchData<number[]>('tables', forceRefresh);
     return tables && tables.length > 0 ? [...tables] : getInitialTables();
   } catch (error) {
     console.error("Error in fetchTables:", error);
+    // Try localStorage as fallback
+    const localTables = localStorage.getItem(LOCAL_STORAGE_KEYS.TABLES);
+    if (localTables) {
+      try {
+        const parsedTables = JSON.parse(localTables);
+        return Array.isArray(parsedTables) ? parsedTables : getInitialTables();
+      } catch (e) {
+        console.error("Error parsing tables from localStorage:", e);
+      }
+    }
     return getInitialTables();
   }
 }
 
 export async function saveTables(tables: number[]): Promise<boolean> {
   try {
-    return await saveData('tables', tables);
+    // Save to localStorage first
+    localStorage.setItem(LOCAL_STORAGE_KEYS.TABLES, JSON.stringify(tables));
+    
+    // Then try API
+    const success = await saveData('tables', tables);
+    return success;
   } catch (error) {
     console.error("Error in saveTables:", error);
     return false;
   }
 }
 
-// Menu items API with improved error handling
+// Menu items API with improved error handling and localStorage fallback
 export async function fetchMenuItems(forceRefresh = false): Promise<MenuItem[]> {
   try {
     const menuItems = await fetchData<MenuItem[]>('menu', forceRefresh);
     return menuItems && menuItems.length > 0 ? [...menuItems] : getInitialMenuItems();
   } catch (error) {
     console.error("Error in fetchMenuItems:", error);
+    // Try localStorage as fallback
+    const localMenuItems = localStorage.getItem(LOCAL_STORAGE_KEYS.MENU_ITEMS);
+    if (localMenuItems) {
+      try {
+        const parsedMenuItems = JSON.parse(localMenuItems);
+        return Array.isArray(parsedMenuItems) ? parsedMenuItems : getInitialMenuItems();
+      } catch (e) {
+        console.error("Error parsing menu items from localStorage:", e);
+      }
+    }
     return getInitialMenuItems();
   }
 }
 
 export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
   try {
-    return await saveData('menu', menuItems);
+    // Save to localStorage first
+    localStorage.setItem(LOCAL_STORAGE_KEYS.MENU_ITEMS, JSON.stringify(menuItems));
+    
+    // Then try API
+    const success = await saveData('menu', menuItems);
+    return success;
   } catch (error) {
     console.error("Error in saveMenuItems:", error);
     return false;
   }
 }
 
-// Orders API with improved error handling
+// Orders API with improved error handling and localStorage fallback
 export async function fetchOrders(forceRefresh = false): Promise<Order[]> {
   try {
     const orders = await fetchData<Order[]>('orders', forceRefresh);
     return orders ? [...orders] : [];
   } catch (error) {
     console.error("Error in fetchOrders:", error);
+    // Try localStorage as fallback
+    const localOrders = localStorage.getItem(LOCAL_STORAGE_KEYS.ORDERS);
+    if (localOrders) {
+      try {
+        const parsedOrders = JSON.parse(localOrders);
+        return Array.isArray(parsedOrders) ? parsedOrders : [];
+      } catch (e) {
+        console.error("Error parsing orders from localStorage:", e);
+      }
+    }
     return [];
   }
 }
 
 export async function saveOrders(orders: Order[]): Promise<boolean> {
   try {
-    return await saveData('orders', orders);
+    // Save to localStorage first
+    localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+    
+    // Then try API
+    const success = await saveData('orders', orders);
+    return success;
   } catch (error) {
     console.error("Error in saveOrders:", error);
     return false;
@@ -252,10 +342,38 @@ export async function saveOrders(orders: Order[]): Promise<boolean> {
 
 // Initial data
 export const getInitialTables = (): number[] => {
+  // Check localStorage first
+  try {
+    const localTables = localStorage.getItem(LOCAL_STORAGE_KEYS.TABLES);
+    if (localTables) {
+      const parsedTables = JSON.parse(localTables);
+      if (Array.isArray(parsedTables) && parsedTables.length > 0) {
+        return parsedTables;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading tables from localStorage:", e);
+  }
+  
+  // Default tables
   return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 };
 
 export const getInitialMenuItems = (): MenuItem[] => {
+  // Check localStorage first
+  try {
+    const localMenuItems = localStorage.getItem(LOCAL_STORAGE_KEYS.MENU_ITEMS);
+    if (localMenuItems) {
+      const parsedMenuItems = JSON.parse(localMenuItems);
+      if (Array.isArray(parsedMenuItems) && parsedMenuItems.length > 0) {
+        return parsedMenuItems;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading menu items from localStorage:", e);
+  }
+  
+  // Default to initial data from data file
   return initialMenuItems;
 };
 
@@ -324,3 +442,19 @@ export const subscribeToDataChanges = (callback: () => void) => {
   
   return () => clearInterval(intervalId); // Return unsubscribe function
 };
+
+// Initialize data on module load to ensure localStorage is populated
+(function initializeLocalStorage() {
+  // Check if localStorage has data, if not, populate with defaults
+  if (!localStorage.getItem(LOCAL_STORAGE_KEYS.TABLES)) {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.TABLES, JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
+  }
+  
+  if (!localStorage.getItem(LOCAL_STORAGE_KEYS.MENU_ITEMS)) {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.MENU_ITEMS, JSON.stringify(initialMenuItems));
+  }
+  
+  if (!localStorage.getItem(LOCAL_STORAGE_KEYS.ORDERS)) {
+    localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify([]));
+  }
+})();
