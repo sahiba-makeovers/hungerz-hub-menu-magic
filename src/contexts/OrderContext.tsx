@@ -8,7 +8,8 @@ import {
   fetchOrders, saveOrders,
   getInitialTables, getInitialMenuItems,
   clearCache, forceRefresh,
-  getCurrentCacheState
+  getCurrentCacheState,
+  subscribeToDataChanges
 } from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -30,47 +31,53 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     { code: 'PRINCE10', discount: 10, type: 'percentage' },
   ];
 
-  // Function to refresh all data from API
+  // Function to refresh all data from API with improved reliability
   const refreshAllData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Clear cache to force fresh data
       clearCache();
       
-      // Fetch tables
+      // Fetch tables with retry logic
       const apiTables = await fetchTables(true);
       if (apiTables && apiTables.length > 0) {
         setTables(apiTables);
+        console.log("Tables refreshed:", apiTables);
       }
 
-      // Fetch menu items
+      // Fetch menu items with retry logic
       const apiMenuItems = await fetchMenuItems(true);
       if (apiMenuItems && apiMenuItems.length > 0) {
         setMenuItems(apiMenuItems);
+        console.log("Menu items refreshed:", apiMenuItems.length);
       }
 
-      // Fetch orders
+      // Fetch orders with retry logic
       const apiOrders = await fetchOrders(true);
-      if (apiOrders && apiOrders.length > 0) {
+      if (apiOrders) {
         setOrders(apiOrders);
+        console.log("Orders refreshed:", apiOrders.length);
       }
       
       setDataInitialized(true);
       console.log("All data refreshed, cache state:", getCurrentCacheState());
+      return true;
     } catch (error) {
       console.error("Failed to refresh data:", error);
-      toast.error("Failed to refresh data from server. Some features may not work properly.");
+      toast.error("Failed to refresh data. Using local data.");
+      return false;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Function to refresh only menu items
+  // Function to refresh only menu items with improved error handling
   const refreshMenuItems = useCallback(async () => {
     try {
       const apiMenuItems = await fetchMenuItems(true);
       if (apiMenuItems && apiMenuItems.length > 0) {
         setMenuItems(apiMenuItems);
+        console.log("Menu items refreshed:", apiMenuItems.length);
         return true;
       }
       return false;
@@ -80,12 +87,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Function to refresh only orders
+  // Function to refresh only orders with improved error handling
   const refreshOrders = useCallback(async () => {
     try {
       const apiOrders = await fetchOrders(true);
-      if (apiOrders && apiOrders.length > 0) {
+      if (apiOrders) {
         setOrders(apiOrders);
+        console.log("Orders refreshed:", apiOrders.length);
         return true;
       }
       return false;
@@ -95,9 +103,52 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Load data from API on mount
+  // Set up data subscription for auto-refresh
   useEffect(() => {
-    refreshAllData();
+    const unsubscribe = subscribeToDataChanges(() => {
+      console.log("Data changes detected, refreshing...");
+      
+      // Only update if not already loading
+      if (!isLoading) {
+        fetchTables(true).then(freshTables => {
+          if (freshTables && freshTables.length > 0) {
+            setTables(freshTables);
+          }
+        });
+        
+        fetchMenuItems(true).then(freshMenuItems => {
+          if (freshMenuItems && freshMenuItems.length > 0) {
+            setMenuItems(freshMenuItems);
+          }
+        });
+        
+        fetchOrders(true).then(freshOrders => {
+          if (freshOrders) {
+            setOrders(freshOrders);
+          }
+        });
+      }
+    });
+    
+    return unsubscribe;
+  }, [isLoading]);
+
+  // Load data from API on mount with improved error handling
+  useEffect(() => {
+    const initializeData = async () => {
+      await refreshAllData();
+      
+      // Fallback to defaults if API fails
+      if (tables.length === 0) {
+        setTables(getInitialTables());
+      }
+      
+      if (menuItems.length === 0) {
+        setMenuItems(getInitialMenuItems());
+      }
+    };
+    
+    initializeData();
   }, [refreshAllData]);
 
   // Initialize with table ID from URL if available
@@ -115,17 +166,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Save orders whenever they change
+  // Save orders whenever they change with immediate update
   useEffect(() => {
     if (dataInitialized && orders.length > 0) {
-      console.log("Saving updated orders:", orders);
+      console.log("Saving updated orders:", orders.length);
       saveOrders(orders).catch(error => 
         console.error("Failed to save orders:", error)
       );
     }
   }, [orders, dataInitialized]);
 
-  // Save tables whenever they change
+  // Save tables whenever they change with immediate update
   useEffect(() => {
     if (dataInitialized && tables.length > 0) {
       console.log("Saving updated tables:", tables);
@@ -135,16 +186,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [tables, dataInitialized]);
   
-  // Save menuItems whenever they change
+  // Save menuItems whenever they change with immediate update
   useEffect(() => {
     if (dataInitialized && menuItems.length > 0) {
-      console.log("Saving updated menu items:", menuItems);
+      console.log("Saving updated menu items:", menuItems.length);
       saveMenuItems(menuItems).catch(error => 
         console.error("Failed to save menu items:", error)
       );
     }
   }, [menuItems, dataInitialized]);
 
+  // Cart operations
   const addToCart = (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => {
     setCart((prevCart) => {
       // Check if the item is already in the cart with the same variant
@@ -223,6 +275,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return total;
   };
 
+  // Enhanced order placement with better synchronization
   const placeOrder = async () => {
     if (!tableId) {
       toast.error('Please select a table before placing an order');
@@ -237,7 +290,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       tableId: tableId,
-      items: [...cart],
+      items: JSON.parse(JSON.stringify(cart)),
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       totalAmount: getDiscountedTotal(),
@@ -248,7 +301,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await refreshOrders();
       
       // Then add the new order
-      setOrders((prevOrders) => {
+      setOrders(prevOrders => {
         const updatedOrders = [...prevOrders, newOrder];
         
         // Save orders to server immediately
@@ -275,8 +328,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // First refresh to get latest orders
       await refreshOrders();
       
-      setOrders((prevOrders) => {
-        const updatedOrders = prevOrders.map((order) => {
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => {
           if (order.id === orderId) {
             return { ...order, status };
           }
@@ -298,7 +351,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Add table management
+  // Enhanced table management with better synchronization
   const addTable = async (tableId: number) => {
     try {
       // First refresh to get latest tables
@@ -350,7 +403,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Add menu item management
+  // Enhanced menu item management with better synchronization
   const addMenuItem = async (item: MenuItem) => {
     try {
       // First refresh to get latest menu items

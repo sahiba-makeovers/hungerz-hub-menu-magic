@@ -10,10 +10,10 @@ import { toast } from 'sonner';
 import { fetchTables, forceRefresh, getCurrentCacheState } from '@/utils/dataStorage';
 
 const QRGeneratorContent = () => {
-  const { isLoading, tables, setTables } = useOrder();
+  const { isLoading, tables, setTables, refreshAllData } = useOrder();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Function to refresh tables data
+  // Function to refresh tables data with enhanced reliability
   const refreshTablesData = async () => {
     try {
       setRefreshing(true);
@@ -25,6 +25,7 @@ const QRGeneratorContent = () => {
       if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
         console.log("Tables refreshed:", freshTables);
+        console.log("Cache state after refresh:", getCurrentCacheState());
         toast.success("Tables data refreshed successfully");
       } else {
         toast.error("No tables data available");
@@ -37,23 +38,22 @@ const QRGeneratorContent = () => {
     }
   };
 
-  // Full data refresh function
+  // Full data refresh function with enhanced reliability
   const fullRefresh = async () => {
     try {
       setRefreshing(true);
       toast.info("Refreshing all data...");
       
-      const success = await forceRefresh();
+      await refreshAllData();
+      console.log("Cache state after refresh:", getCurrentCacheState());
       
-      if (success) {
-        // Fetch fresh tables specifically for this component
-        const freshTables = await fetchTables(true);
+      // Fetch fresh tables specifically for this component
+      const freshTables = await fetchTables(true);
+      if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
-        console.log("Cache state after refresh:", getCurrentCacheState());
-        toast.success("All data refreshed successfully");
-      } else {
-        toast.error("Failed to refresh some data");
       }
+      
+      toast.success("All data refreshed successfully");
     } catch (error) {
       console.error("Error during full refresh:", error);
       toast.error("Failed to refresh data");

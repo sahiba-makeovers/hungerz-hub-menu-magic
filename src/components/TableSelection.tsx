@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QrCode, Download, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
-import { fetchTables } from '@/utils/dataStorage';
+import { fetchTables, getCurrentCacheState } from '@/utils/dataStorage';
 
 interface TableSelectionProps {
   onRefresh?: () => Promise<void>;
@@ -23,6 +24,7 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
     }
   }, []);
 
+  // More reliable refresh function
   const refreshTablesData = async () => {
     if (onRefresh) {
       await onRefresh();
@@ -31,10 +33,16 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
     
     setRefreshing(true);
     try {
+      toast.info("Refreshing tables data...");
       const freshTables = await fetchTables(true);
+      
       if (freshTables && freshTables.length > 0) {
         setTables(freshTables);
         console.log("Tables refreshed in TableSelection:", freshTables);
+        console.log("Cache state after refresh:", getCurrentCacheState());
+        toast.success("Tables data refreshed successfully");
+      } else {
+        toast.error("No tables data available");
       }
     } catch (error) {
       console.error("Error refreshing tables in TableSelection:", error);

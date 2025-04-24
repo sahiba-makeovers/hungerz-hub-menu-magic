@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
@@ -18,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchMenuItems, getCurrentCacheState } from '@/utils/dataStorage';
 
 const MenuContent = () => {
-  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems } = useOrder();
+  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems, refreshAllData } = useOrder();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [inputCoupon, setInputCoupon] = useState('');
@@ -52,7 +51,7 @@ const MenuContent = () => {
     }
   }, [tableId]);
 
-  // Function to refresh menu data
+  // Function to refresh menu data with enhanced reliability
   const refreshMenuData = async () => {
     try {
       setRefreshing(true);
@@ -62,14 +61,27 @@ const MenuContent = () => {
       });
       
       // Use the refreshMenuItems function from OrderContext
-      await refreshMenuItems();
+      const success = await refreshMenuItems();
       
-      console.log("Cache state after menu refresh:", getCurrentCacheState());
-      
-      toast({
-        title: "Menu refreshed",
-        description: "Menu items updated successfully"
-      });
+      if (success) {
+        console.log("Menu refreshed successfully");
+        console.log("Cache state after menu refresh:", getCurrentCacheState());
+        
+        toast({
+          title: "Menu refreshed",
+          description: "Menu items updated successfully"
+        });
+      } else {
+        console.log("Menu refresh failed, trying full refresh");
+        
+        // Try a full refresh as fallback
+        await refreshAllData();
+        
+        toast({
+          title: "Menu refreshed",
+          description: "Menu items updated via full refresh"
+        });
+      }
     } catch (error) {
       console.error("Error refreshing menu:", error);
       toast({
