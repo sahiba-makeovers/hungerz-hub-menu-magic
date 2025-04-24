@@ -7,7 +7,7 @@ import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import Logo from '@/components/Logo';
 import TableSelection from '@/components/TableSelection';
 import { toast } from 'sonner';
-import { clearCache, fetchTables } from '@/utils/dataStorage';
+import { clearCache, fetchTables, forceRefresh } from '@/utils/dataStorage';
 
 const QRGeneratorContent = () => {
   const { isLoading, tables, setTables } = useOrder();
@@ -27,6 +27,23 @@ const QRGeneratorContent = () => {
     } catch (error) {
       console.error("Error refreshing tables:", error);
       toast.error("Failed to refresh tables data");
+    }
+  };
+
+  // Full data refresh function
+  const fullRefresh = async () => {
+    try {
+      toast.info("Refreshing all data...");
+      await forceRefresh();
+      // Fetch fresh tables specifically for this component
+      const freshTables = await fetchTables();
+      if (freshTables && freshTables.length > 0) {
+        setTables(freshTables);
+      }
+      toast.success("All data refreshed successfully");
+    } catch (error) {
+      console.error("Error during full refresh:", error);
+      toast.error("Failed to refresh data");
     }
   };
 
@@ -51,7 +68,7 @@ const QRGeneratorContent = () => {
           <Button 
             variant="outline"
             className="flex items-center gap-2"
-            onClick={refreshTablesData}
+            onClick={fullRefresh}
             disabled={isLoading}
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw size={16} />}

@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { QrCode, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
+import { fetchTables } from '@/utils/dataStorage';
 
 const TableSelection = () => {
   const { tableId, setTableId, tables } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
+  const [localTables, setLocalTables] = useState<number[]>(tables || []);
+
+  // Ensure we have the latest tables data
+  useEffect(() => {
+    const refreshTables = async () => {
+      try {
+        const freshTables = await fetchTables();
+        if (freshTables && freshTables.length > 0) {
+          setLocalTables(freshTables);
+        }
+      } catch (error) {
+        console.error("Error refreshing tables in TableSelection:", error);
+      }
+    };
+    
+    refreshTables();
+  }, [tables]);
 
   const generateTableUrl = (tableId: number) => {
     const baseUrl = window.location.origin;
@@ -67,7 +86,7 @@ const TableSelection = () => {
     <div className="w-full max-w-4xl mx-auto p-4">
       <h2 className="text-2xl font-semibold text-hungerzblue mb-6 text-center">Select a Table</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        {tables.sort((a, b) => a - b).map((table) => (
+        {localTables.sort((a, b) => a - b).map((table) => (
           <Button
             key={table}
             variant={tableId === table ? "default" : "outline"}

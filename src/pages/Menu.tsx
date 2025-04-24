@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Link } from 'react-router-dom';
@@ -15,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { clearCache, fetchMenuItems } from '@/utils/dataStorage';
+import { clearCache, fetchMenuItems, forceRefresh } from '@/utils/dataStorage';
 
 const MenuContent = () => {
   const { cart, tableId, applyCoupon, discount, couponCode, menuItems, setTables } = useOrder();
@@ -61,21 +60,13 @@ const MenuContent = () => {
         description: "Fetching the latest menu items..."
       });
       
-      clearCache(); // Clear cache to force fresh data
-      const freshMenuItems = await fetchMenuItems();
-      if (freshMenuItems && freshMenuItems.length > 0) {
-        // The context will be updated automatically
-        toast({
-          title: "Menu refreshed",
-          description: "Menu items updated successfully"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "No menu data available",
-          variant: "destructive"
-        });
-      }
+      // Complete data refresh
+      await forceRefresh();
+      
+      toast({
+        title: "Menu refreshed",
+        description: "Menu items updated successfully"
+      });
     } catch (error) {
       console.error("Error refreshing menu:", error);
       toast({
