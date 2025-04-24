@@ -4,6 +4,12 @@ export interface VariantPrice {
   full: number;
 }
 
+export interface MenuCategory {
+  id: string;
+  name: string;
+  displayName: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
