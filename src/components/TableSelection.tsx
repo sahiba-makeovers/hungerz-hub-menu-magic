@@ -104,7 +104,7 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
               <div className="p-3 bg-white rounded-lg shadow-md">
                 <QRCodeSVG
                   id="qr-canvas"
-                  value={window.location.origin + generateTableUrl(tableId)}
+                  value={generateTableUrl(tableId)}
                   size={200}
                   bgColor={"#ffffff"}
                   fgColor={"#000000"}
@@ -117,7 +117,7 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
               </p>
               <div className="mt-4 space-y-2">
                 <p className="text-xs text-gray-500 text-center">
-                  QR code URL: {window.location.origin + generateTableUrl(tableId)}
+                  QR code URL: {generateTableUrl(tableId)}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   <Button 

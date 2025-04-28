@@ -1,5 +1,4 @@
 
-
 import { MenuItem, Order } from '@/types';
 import { menuItems as initialMenuItems } from '@/data/menuData';
 import { tables as initialTables } from '@/data/tablesData';
@@ -19,7 +18,15 @@ export async function fetchTables(): Promise<number[]> {
 
 export async function saveTables(tables: number[]): Promise<boolean> {
   try {
+    // Update the runtime cache
     runtimeCache.tables = [...tables];
+    
+    // Here we would update the file directly if we were in a Node.js environment
+    // For frontend-only app, we'll have to simulate this behavior
+    console.log("Tables updated:", tables);
+    
+    // In a real implementation, this would send an API request to update the file
+    // For now, we'll just return true to simulate success
     return true;
   } catch (error) {
     console.error("Error saving tables:", error);
@@ -34,7 +41,12 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 
 export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
   try {
+    // Update the runtime cache
     runtimeCache.menuItems = [...menuItems];
+    
+    // Simulate file update
+    console.log("Menu items updated:", menuItems);
+    
     return true;
   } catch (error) {
     console.error("Error saving menu items:", error);
@@ -49,7 +61,12 @@ export async function fetchOrders(): Promise<Order[]> {
 
 export async function saveOrders(orders: Order[]): Promise<boolean> {
   try {
+    // Update the runtime cache
     runtimeCache.orders = [...orders];
+    
+    // Simulate file update
+    console.log("Orders updated:", orders);
+    
     return true;
   } catch (error) {
     console.error("Error saving orders:", error);
@@ -87,7 +104,7 @@ export const clearCache = () => {
   console.log("Runtime cache cleared");
 };
 
-// Add missing functions that are causing errors
+// Cache state information for debugging
 export const getCurrentCacheState = () => {
   return {
     tables: runtimeCache.tables.length,
@@ -101,4 +118,3 @@ export const subscribeToDataChanges = () => {
   console.log("Subscribed to data changes");
   return () => console.log("Unsubscribed from data changes");
 };
-

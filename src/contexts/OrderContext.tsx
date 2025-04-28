@@ -24,13 +24,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dataInitialized, setDataInitialized] = useState<boolean>(false);
 
-  // Define available coupons
   const availableCoupons: Coupon[] = [
     { code: 'SHUBHAM50', discount: 50, type: 'percentage' },
     { code: 'PRINCE10', discount: 10, type: 'percentage' },
   ];
 
-  // Function to refresh all data
   const refreshAllData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
@@ -52,7 +50,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Function to refresh only menu items
   const refreshMenuItems = useCallback(async (): Promise<boolean> => {
     try {
       const items = await fetchMenuItems();
@@ -64,7 +61,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Function to refresh only orders
   const refreshOrders = useCallback(async (): Promise<boolean> => {
     try {
       const newOrders = await fetchOrders();
@@ -76,36 +72,30 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Load data on mount
   useEffect(() => {
     refreshAllData();
   }, [refreshAllData]);
 
-  // Save orders whenever they change
   useEffect(() => {
     if (dataInitialized && orders.length > 0) {
       saveOrders(orders);
     }
   }, [orders, dataInitialized]);
 
-  // Save tables whenever they change
   useEffect(() => {
     if (dataInitialized && tables.length > 0) {
       saveTables(tables);
     }
   }, [tables, dataInitialized]);
   
-  // Save menuItems whenever they change
   useEffect(() => {
     if (dataInitialized && menuItems.length > 0) {
       saveMenuItems(menuItems);
     }
   }, [menuItems, dataInitialized]);
 
-  // Cart operations
   const addToCart = (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => {
     setCart((prevCart) => {
-      // Check if the item is already in the cart with the same variant
       const existingItemIndex = prevCart.findIndex(
         (cartItem) => 
           cartItem.menuItem.id === item.id && 
@@ -113,13 +103,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       );
 
       if (existingItemIndex !== -1) {
-        // If item exists, update its quantity
         const updatedCart = [...prevCart];
         updatedCart[existingItemIndex].quantity += quantity;
         toast.success(`Added ${item.name} to cart`);
         return updatedCart;
       } else {
-        // If item doesn't exist, add it to the cart
         toast.success(`Added ${item.name} to cart`);
         return [...prevCart, { menuItem: item, quantity, variant, notes }];
       }
@@ -172,7 +160,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 0);
   };
 
-  // Apply discount based on coupon
   const getDiscountedTotal = () => {
     const total = getCartTotal();
     if (discount > 0) {
@@ -181,7 +168,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return total;
   };
 
-  // Enhanced order placement with better synchronization
   const placeOrder = async () => {
     if (!tableId) {
       toast.error('Please select a table before placing an order');
@@ -203,14 +189,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     try {
-      // First refresh to get latest orders
       await refreshOrders();
       
-      // Then add the new order to both state and storage
       const updatedOrders = [...orders, newOrder];
       setOrders(updatedOrders);
       
-      // Save orders to server immediately
       try {
         await saveOrders(updatedOrders);
       } catch (error) {
@@ -219,7 +202,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       clearCart();
-      // Reset discount after order is placed
       setDiscount(0);
       setCouponCode(null);
       toast.success('Order placed successfully');
@@ -231,10 +213,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateOrderStatus = async (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
     try {
-      // First refresh to get latest orders
       await refreshOrders();
       
-      // Update the order in state
       const updatedOrders = orders.map(order => {
         if (order.id === orderId) {
           return { ...order, status };
@@ -242,10 +222,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return order;
       });
       
-      // Update state immediately
       setOrders(updatedOrders);
       
-      // Save updated orders
       try {
         await saveOrders(updatedOrders);
         toast.success(`Order status updated to ${status}`);
@@ -259,10 +237,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Enhanced table management with better synchronization
   const addTable = async (tableId: number) => {
     try {
-      // First refresh to get latest tables
       const freshTables = await fetchTables();
       
       if (freshTables.includes(tableId)) {
@@ -270,17 +246,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
-      // Update state immediately
       const updatedTables = [...tables, tableId].sort((a, b) => a - b);
       setTables(updatedTables);
       
-      // Save updated tables
       try {
         await saveTables(updatedTables);
+        
+        console.log(`Table ${tableId} added, file update simulated`);
+        
         toast.success(`Table ${tableId} added successfully`);
       } catch (error) {
         console.error("Failed to save new table:", error);
-        toast.error('Table added locally but not synced to server. Please refresh.');
+        toast.error('Failed to add table. Please try again.');
       }
     } catch (error) {
       console.error("Error adding table:", error);
@@ -290,20 +267,20 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteTable = async (tableId: number) => {
     try {
-      // First refresh to get latest tables
       await fetchTables();
       
-      // Update state immediately
       const updatedTables = tables.filter(id => id !== tableId);
       setTables(updatedTables);
       
-      // Save updated tables
       try {
         await saveTables(updatedTables);
+        
+        console.log(`Table ${tableId} removed, file update simulated`);
+        
         toast.success(`Table ${tableId} removed successfully`);
       } catch (error) {
         console.error("Failed to delete table:", error);
-        toast.error('Table removed locally but not synced to server. Please refresh.');
+        toast.error('Failed to remove table. Please try again.');
       }
     } catch (error) {
       console.error("Error removing table:", error);
@@ -311,23 +288,22 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Enhanced menu item management with better synchronization
   const addMenuItem = async (item: MenuItem) => {
     try {
-      // First refresh to get latest menu items
       await refreshMenuItems();
       
-      // Update state immediately
       const updatedMenuItems = [...menuItems, item];
       setMenuItems(updatedMenuItems);
       
-      // Save updated menu items
       try {
         await saveMenuItems(updatedMenuItems);
+        
+        console.log(`Menu item ${item.name} added, file update simulated`);
+        
         toast.success(`${item.name} added to menu successfully`);
       } catch (error) {
         console.error("Failed to save new menu item:", error);
-        toast.error('Menu item added locally but not synced to server. Please refresh.');
+        toast.error('Failed to add menu item. Please try again.');
       }
     } catch (error) {
       console.error("Error adding menu item:", error);
@@ -337,20 +313,20 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteMenuItem = async (itemId: string) => {
     try {
-      // First refresh to get latest menu items
       await refreshMenuItems();
       
-      // Update state immediately
       const updatedMenuItems = menuItems.filter(item => item.id !== itemId);
       setMenuItems(updatedMenuItems);
       
-      // Save updated menu items
       try {
         await saveMenuItems(updatedMenuItems);
+        
+        console.log(`Menu item ${itemId} removed, file update simulated`);
+        
         toast.success(`Menu item removed successfully`);
       } catch (error) {
         console.error("Failed to delete menu item:", error);
-        toast.error('Menu item removed locally but not synced to server. Please refresh.');
+        toast.error('Failed to remove menu item. Please try again.');
       }
     } catch (error) {
       console.error("Error removing menu item:", error);
@@ -358,7 +334,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Add coupon management
   const applyCoupon = (code: string): { success: boolean; message: string } => {
     const coupon = availableCoupons.find(
       c => c.code.toLowerCase() === code.toLowerCase()
