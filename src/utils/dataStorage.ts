@@ -3,6 +3,7 @@ import { MenuItem, Order } from '@/types';
 import { menuItems as initialMenuItems } from '@/data/menuData';
 import { tables as initialTables } from '@/data/tablesData';
 import { orders as initialOrders } from '@/data/ordersData';
+import * as fileStorage from './fileStorage';
 
 // Runtime memory cache
 const runtimeCache = {
@@ -11,9 +12,44 @@ const runtimeCache = {
   orders: [...initialOrders]
 };
 
+// Initialize storage with initial data
+const initializeStorage = async () => {
+  try {
+    // Check if we have stored data
+    const storedTables = localStorage.getItem('/data/tables.json');
+    const storedMenu = localStorage.getItem('/data/menu.json');
+    const storedOrders = localStorage.getItem('/data/orders.json');
+    
+    // If no stored data, initialize with defaults
+    if (!storedTables) {
+      await fileStorage.saveTables(initialTables);
+    }
+    
+    if (!storedMenu) {
+      await fileStorage.saveMenuItems(initialMenuItems);
+    }
+    
+    if (!storedOrders) {
+      await fileStorage.saveOrders(initialOrders);
+    }
+  } catch (error) {
+    console.error("Error initializing storage:", error);
+  }
+};
+
+// Run initialization
+initializeStorage();
+
 // Tables operations
 export async function fetchTables(): Promise<number[]> {
-  return [...runtimeCache.tables];
+  try {
+    const tables = await fileStorage.fetchTables();
+    runtimeCache.tables = [...tables];
+    return tables;
+  } catch (error) {
+    console.error("Error fetching tables:", error);
+    return runtimeCache.tables;
+  }
 }
 
 export async function saveTables(tables: number[]): Promise<boolean> {
@@ -21,12 +57,12 @@ export async function saveTables(tables: number[]): Promise<boolean> {
     // Update the runtime cache
     runtimeCache.tables = [...tables];
     
-    // Here we would update the file directly if we were in a Node.js environment
-    // For frontend-only app, we'll have to simulate this behavior
+    // Save to persistent storage
+    await fileStorage.saveTables(tables);
+    
+    // Simulate file update for debugging
     console.log("Tables updated:", tables);
     
-    // In a real implementation, this would send an API request to update the file
-    // For now, we'll just return true to simulate success
     return true;
   } catch (error) {
     console.error("Error saving tables:", error);
@@ -36,13 +72,26 @@ export async function saveTables(tables: number[]): Promise<boolean> {
 
 // Menu items operations
 export async function fetchMenuItems(): Promise<MenuItem[]> {
-  return [...runtimeCache.menuItems];
+  try {
+    const menuItems = await fileStorage.fetchMenuItems();
+    if (menuItems && menuItems.length > 0) {
+      runtimeCache.menuItems = [...menuItems];
+      return menuItems;
+    }
+    return runtimeCache.menuItems;
+  } catch (error) {
+    console.error("Error fetching menu items:", error);
+    return runtimeCache.menuItems;
+  }
 }
 
 export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
   try {
     // Update the runtime cache
     runtimeCache.menuItems = [...menuItems];
+    
+    // Save to persistent storage
+    await fileStorage.saveMenuItems(menuItems);
     
     // Simulate file update
     console.log("Menu items updated:", menuItems);
@@ -56,13 +105,26 @@ export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
 
 // Orders operations
 export async function fetchOrders(): Promise<Order[]> {
-  return [...runtimeCache.orders];
+  try {
+    const orders = await fileStorage.fetchOrders();
+    if (orders && orders.length > 0) {
+      runtimeCache.orders = [...orders];
+      return orders;
+    }
+    return runtimeCache.orders;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return runtimeCache.orders;
+  }
 }
 
 export async function saveOrders(orders: Order[]): Promise<boolean> {
   try {
     // Update the runtime cache
     runtimeCache.orders = [...orders];
+    
+    // Save to persistent storage
+    await fileStorage.saveOrders(orders);
     
     // Simulate file update
     console.log("Orders updated:", orders);
@@ -89,6 +151,12 @@ export const forceRefresh = async () => {
     runtimeCache.tables = [...initialTables];
     runtimeCache.menuItems = [...initialMenuItems];
     runtimeCache.orders = [...initialOrders];
+    
+    // Reset persistent storage to defaults
+    await fileStorage.saveTables(initialTables);
+    await fileStorage.saveMenuItems(initialMenuItems);
+    await fileStorage.saveOrders(initialOrders);
+    
     return true;
   } catch (error) {
     console.error("Error during force refresh:", error);
@@ -101,20 +169,9 @@ export const clearCache = () => {
   runtimeCache.tables = [...initialTables];
   runtimeCache.menuItems = [...initialMenuItems];
   runtimeCache.orders = [...initialOrders];
+  
+  // Clear persistent storage
+  fileStorage.clearStorage();
+  
   console.log("Runtime cache cleared");
-};
-
-// Cache state information for debugging
-export const getCurrentCacheState = () => {
-  return {
-    tables: runtimeCache.tables.length,
-    menuItems: runtimeCache.menuItems.length,
-    orders: runtimeCache.orders.length
-  };
-};
-
-// Mock subscription function - in a real app this would set up event listeners
-export const subscribeToDataChanges = () => {
-  console.log("Subscribed to data changes");
-  return () => console.log("Unsubscribed from data changes");
 };

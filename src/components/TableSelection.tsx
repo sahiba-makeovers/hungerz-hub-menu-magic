@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode, Download } from 'lucide-react';
+import { QrCode, Download, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 
@@ -12,9 +12,10 @@ interface TableSelectionProps {
 }
 
 const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
-  const { tableId, setTableId, tables } = useOrder();
+  const { tableId, setTableId, tables, refreshAllData } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
   const [localTables, setLocalTables] = useState<number[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Initialize with tables from context
   useEffect(() => {
@@ -31,6 +32,19 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   const openTableMenu = (tableId: number) => {
     const url = generateTableUrl(tableId);
     window.open(url, '_blank');
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshAllData();
+      toast.success("Tables refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing tables:", error);
+      toast.error("Failed to refresh tables");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const downloadQRCode = () => {
@@ -75,6 +89,16 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
     <div className="w-full max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-hungerzblue">Select a Table</h2>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh Tables'}
+        </Button>
       </div>
       
       {localTables.length === 0 ? (
