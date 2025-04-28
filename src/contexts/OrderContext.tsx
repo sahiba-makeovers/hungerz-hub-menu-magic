@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
 import { toast } from 'sonner';
@@ -31,166 +30,75 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     { code: 'PRINCE10', discount: 10, type: 'percentage' },
   ];
 
-  // Function to refresh all data from API with improved reliability
+  // Function to refresh all data
   const refreshAllData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
-      // Clear cache to force fresh data
-      clearCache();
-      
-      // Fetch tables with retry logic
-      const apiTables = await fetchTables(true);
-      if (apiTables && apiTables.length > 0) {
-        setTables(apiTables);
-        console.log("Tables refreshed:", apiTables);
-      }
+      const [apiTables, apiMenuItems, apiOrders] = await Promise.all([
+        fetchTables(),
+        fetchMenuItems(),
+        fetchOrders()
+      ]);
 
-      // Fetch menu items with retry logic
-      const apiMenuItems = await fetchMenuItems(true);
-      if (apiMenuItems && apiMenuItems.length > 0) {
-        setMenuItems(apiMenuItems);
-        console.log("Menu items refreshed:", apiMenuItems.length);
-      }
-
-      // Fetch orders with retry logic
-      const apiOrders = await fetchOrders(true);
-      if (apiOrders) {
-        setOrders(apiOrders);
-        console.log("Orders refreshed:", apiOrders.length);
-      }
-      
+      setTables(apiTables);
+      setMenuItems(apiMenuItems);
+      setOrders(apiOrders);
       setDataInitialized(true);
-      console.log("All data refreshed, cache state:", getCurrentCacheState());
     } catch (error) {
       console.error("Failed to refresh data:", error);
-      toast.error("Failed to refresh data. Using local data.");
+      toast.error("Failed to refresh data");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Function to refresh only menu items with improved error handling
+  // Function to refresh only menu items
   const refreshMenuItems = useCallback(async (): Promise<boolean> => {
     try {
-      const apiMenuItems = await fetchMenuItems(true);
-      if (apiMenuItems && apiMenuItems.length > 0) {
-        setMenuItems(apiMenuItems);
-        console.log("Menu items refreshed:", apiMenuItems.length);
-        return true;
-      }
-      return false;
+      const items = await fetchMenuItems();
+      setMenuItems(items);
+      return true;
     } catch (error) {
       console.error("Failed to refresh menu items:", error);
       return false;
     }
   }, []);
 
-  // Function to refresh only orders with improved error handling
+  // Function to refresh only orders
   const refreshOrders = useCallback(async (): Promise<boolean> => {
     try {
-      const apiOrders = await fetchOrders(true);
-      if (apiOrders) {
-        setOrders(apiOrders);
-        console.log("Orders refreshed:", apiOrders.length);
-        return true;
-      }
-      return false;
+      const newOrders = await fetchOrders();
+      setOrders(newOrders);
+      return true;
     } catch (error) {
       console.error("Failed to refresh orders:", error);
       return false;
     }
   }, []);
 
-  // Set up data subscription for auto-refresh
+  // Load data on mount
   useEffect(() => {
-    const unsubscribe = subscribeToDataChanges(() => {
-      console.log("Data changes detected, refreshing...");
-      
-      // Only update if not already loading
-      if (!isLoading) {
-        fetchTables(true).then(freshTables => {
-          if (freshTables && freshTables.length > 0) {
-            setTables(freshTables);
-          }
-        });
-        
-        fetchMenuItems(true).then(freshMenuItems => {
-          if (freshMenuItems && freshMenuItems.length > 0) {
-            setMenuItems(freshMenuItems);
-          }
-        });
-        
-        fetchOrders(true).then(freshOrders => {
-          if (freshOrders) {
-            setOrders(freshOrders);
-          }
-        });
-      }
-    });
-    
-    return unsubscribe;
-  }, [isLoading]);
-
-  // Load data from API on mount with improved error handling
-  useEffect(() => {
-    const initializeData = async () => {
-      await refreshAllData();
-      
-      // Fallback to defaults if API fails
-      if (tables.length === 0) {
-        setTables(getInitialTables());
-      }
-      
-      if (menuItems.length === 0) {
-        setMenuItems(getInitialMenuItems());
-      }
-    };
-    
-    initializeData();
+    refreshAllData();
   }, [refreshAllData]);
 
-  // Initialize with table ID from URL if available
-  useEffect(() => {
-    // Check URL parameter
-    const params = new URLSearchParams(window.location.search);
-    const tableParam = params.get('table');
-    
-    if (tableParam) {
-      const parsedTableId = parseInt(tableParam);
-      if (!isNaN(parsedTableId) && parsedTableId >= 1) {
-        setTableId(parsedTableId);
-        return;
-      }
-    }
-  }, []);
-
-  // Save orders whenever they change with immediate update
+  // Save orders whenever they change
   useEffect(() => {
     if (dataInitialized && orders.length > 0) {
-      console.log("Saving updated orders:", orders.length);
-      saveOrders(orders).catch(error => 
-        console.error("Failed to save orders:", error)
-      );
+      saveOrders(orders);
     }
   }, [orders, dataInitialized]);
 
-  // Save tables whenever they change with immediate update
+  // Save tables whenever they change
   useEffect(() => {
     if (dataInitialized && tables.length > 0) {
-      console.log("Saving updated tables:", tables);
-      saveTables(tables).catch(error => 
-        console.error("Failed to save tables:", error)
-      );
+      saveTables(tables);
     }
   }, [tables, dataInitialized]);
   
-  // Save menuItems whenever they change with immediate update
+  // Save menuItems whenever they change
   useEffect(() => {
     if (dataInitialized && menuItems.length > 0) {
-      console.log("Saving updated menu items:", menuItems.length);
-      saveMenuItems(menuItems).catch(error => 
-        console.error("Failed to save menu items:", error)
-      );
+      saveMenuItems(menuItems);
     }
   }, [menuItems, dataInitialized]);
 

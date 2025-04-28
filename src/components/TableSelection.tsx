@@ -24,7 +24,8 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   }, [tables]);
 
   const generateTableUrl = (tableId: number) => {
-    return `/menu?table=${tableId}`;
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/menu?table=${tableId}`;
   };
 
   const openTableMenu = (tableId: number) => {
