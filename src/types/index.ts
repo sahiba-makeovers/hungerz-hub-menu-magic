@@ -1,6 +1,10 @@
 
 // Adding to the existing types file
 
+export interface TableData {
+  id: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;

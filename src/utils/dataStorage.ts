@@ -1,4 +1,5 @@
 
+
 import { MenuItem, Order } from '@/types';
 import { menuItems as initialMenuItems } from '@/data/menuData';
 import { tables as initialTables } from '@/data/tablesData';
@@ -84,5 +85,20 @@ export const clearCache = () => {
   runtimeCache.menuItems = [...initialMenuItems];
   runtimeCache.orders = [...initialOrders];
   console.log("Runtime cache cleared");
+};
+
+// Add missing functions that are causing errors
+export const getCurrentCacheState = () => {
+  return {
+    tables: runtimeCache.tables.length,
+    menuItems: runtimeCache.menuItems.length,
+    orders: runtimeCache.orders.length
+  };
+};
+
+// Mock subscription function - in a real app this would set up event listeners
+export const subscribeToDataChanges = () => {
+  console.log("Subscribed to data changes");
+  return () => console.log("Unsubscribed from data changes");
 };
 

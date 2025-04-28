@@ -263,7 +263,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addTable = async (tableId: number) => {
     try {
       // First refresh to get latest tables
-      const freshTables = await fetchTables(true);
+      const freshTables = await fetchTables();
       
       if (freshTables.includes(tableId)) {
         toast.error(`Table ${tableId} already exists`);

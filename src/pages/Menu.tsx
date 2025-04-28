@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { fetchMenuItems, getCurrentCacheState } from '@/utils/dataStorage';
+import { fetchMenuItems } from '@/utils/dataStorage';
 
 const MenuContent = () => {
   const { cart, tableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems, refreshAllData } = useOrder();
@@ -65,7 +65,6 @@ const MenuContent = () => {
       
       if (success) {
         console.log("Menu refreshed successfully");
-        console.log("Cache state after menu refresh:", getCurrentCacheState());
         
         toast({
           title: "Menu refreshed",
