@@ -6,9 +6,7 @@ import {
   fetchMenuItems, saveMenuItems,
   fetchOrders, saveOrders,
   getInitialTables, getInitialMenuItems,
-  clearCache, forceRefresh,
-  getCurrentCacheState,
-  subscribeToDataChanges
+  clearCache, forceRefresh
 } from '@/utils/dataStorage';
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
