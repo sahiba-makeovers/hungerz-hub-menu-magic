@@ -22,14 +22,15 @@ export async function loadData<T>(filePath: string): Promise<T> {
   }
 }
 
-// Function to simulate saving data (in a real app, this would make API calls)
+// Function to simulate saving data to a JSON file
+// In a real app, this would make an API call to a backend that would update the file
 export async function saveData<T>(filePath: string, data: T): Promise<boolean> {
   try {
-    // In a browser environment, we can't directly write to files
-    // This would be an API call in a real app
-    console.log(`Data would be saved to ${filePath}:`, data);
+    console.log(`Saving data to ${filePath}:`, data);
     
-    // Store in localStorage as a temporary solution
+    // In a real application with a backend, we would call an API endpoint to save the data
+    // For now, we'll use localStorage as a temporary solution since we can't directly
+    // write to files from the browser
     localStorage.setItem(filePath, JSON.stringify(data));
     
     return true;
@@ -39,20 +40,14 @@ export async function saveData<T>(filePath: string, data: T): Promise<boolean> {
   }
 }
 
-// Function to get data with localStorage fallback
+// Function to get data directly from JSON files
 export async function getData<T>(filePath: string, initialData: T): Promise<T> {
   try {
-    // First try localStorage
-    const storedData = localStorage.getItem(filePath);
-    if (storedData) {
-      return JSON.parse(storedData);
-    }
-    
-    // If not in localStorage, try to fetch from file
+    // Always try to load from the JSON file first
     return await loadData<T>(filePath);
   } catch (error) {
-    // If both fail, return initial data and save it
-    console.log(`Initializing data for ${filePath}`);
+    console.error(`Failed to load from ${filePath}, falling back to initial data:`, error);
+    // If loading from file fails, initialize with the provided data
     await saveData(filePath, initialData);
     return initialData;
   }

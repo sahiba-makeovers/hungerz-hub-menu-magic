@@ -14,15 +14,7 @@ interface TableSelectionProps {
 const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   const { tableId, setTableId, tables, refreshAllData } = useOrder();
   const [downloadQR, setDownloadQR] = useState<boolean>(false);
-  const [localTables, setLocalTables] = useState<number[]>([]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-
-  // Initialize with tables from context
-  useEffect(() => {
-    if (tables && tables.length > 0) {
-      setLocalTables(tables);
-    }
-  }, [tables]);
 
   const generateTableUrl = (tableId: number) => {
     const baseUrl = window.location.origin;
@@ -101,13 +93,13 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
         </Button>
       </div>
       
-      {localTables.length === 0 ? (
+      {tables.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No tables found. Please add tables in the Admin panel.
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {localTables.sort((a, b) => a - b).map((table) => (
+          {tables.sort((a, b) => a - b).map((table) => (
             <Button
               key={table}
               variant={tableId === table ? "default" : "outline"}
