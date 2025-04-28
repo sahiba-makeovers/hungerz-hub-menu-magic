@@ -291,7 +291,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteTable = async (tableId: number) => {
     try {
       // First refresh to get latest tables
-      await fetchTables(true);
+      await fetchTables();
       
       // Update state immediately
       const updatedTables = tables.filter(id => id !== tableId);
