@@ -1,25 +1,16 @@
 {
   "tables": [
     {
-      "id": 2
+      "id": "11"
     },
     {
-      "id": 12
+      "id": "12"
     },
     {
-      "id": 122
+      "id": "13"
     },
     {
-      "id": 1123
-    },
-    {
-      "id": 12
-    },
-    {
-      "id": 121
-    },
-    {
-      "id": 1223
+      "id": 14
     }
   ],
   "menuItems": [
@@ -36,7 +27,94 @@
       "price": 100,
       "category": "garlic-bread",
       "description": "qwerty"
+    },
+    {
+      "id": "custom-1746697345364",
+      "name": "paji",
+      "price": 10,
+      "category": "garlic-bread",
+      "description": "qwerty"
+    },
+    {
+      "id": "custom-1746697483164",
+      "name": "Akshat Swami",
+      "price": 10000,
+      "category": "garlic-bread",
+      "description": "wertyu"
+    },
+    {
+      "id": "custom-1746698457350",
+      "name": "shubha mih",
+      "price": 100,
+      "category": "garlic-bread",
+      "description": "12"
+    },
+    {
+      "id": "custom-1746702113629",
+      "name": "shubham chauhan",
+      "price": 100,
+      "category": "pizza",
+      "description": "12"
     }
   ],
-  "orders": []
+  "orders": [
+    {
+      "id": "order-1746698263496",
+      "tableId": 1223,
+      "items": [
+        {
+          "menuItem": {
+            "id": "custom-1746687765370",
+            "name": "shubham miglani",
+            "price": 100,
+            "category": "garlic-bread",
+            "description": "qwerty"
+          },
+          "quantity": 1
+        },
+        {
+          "menuItem": {
+            "id": "custom-1746697345364",
+            "name": "paji",
+            "price": 10,
+            "category": "garlic-bread",
+            "description": "qwerty"
+          },
+          "quantity": 1
+        }
+      ],
+      "status": "PENDING",
+      "createdAt": "2025-05-08T09:57:43.496Z",
+      "totalAmount": 110
+    },
+    {
+      "id": "order-1746698478717",
+      "tableId": 12,
+      "items": [
+        {
+          "menuItem": {
+            "id": "custom-1746687765370",
+            "name": "shubham miglani",
+            "price": 100,
+            "category": "garlic-bread",
+            "description": "qwerty"
+          },
+          "quantity": 1
+        },
+        {
+          "menuItem": {
+            "id": "custom-1746697345364",
+            "name": "paji",
+            "price": 10,
+            "category": "garlic-bread",
+            "description": "qwerty"
+          },
+          "quantity": 1
+        }
+      ],
+      "status": "PENDING",
+      "createdAt": "2025-05-08T10:01:18.717Z",
+      "totalAmount": 55
+    }
+  ]
 }
