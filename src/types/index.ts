@@ -1,3 +1,4 @@
+
 export interface TableData {
   id: number;
 }
@@ -44,7 +45,7 @@ export interface OrderContextType {
   cart: CartItem[];
   tableId: number | null;
   orders: Order[];
-  tables: TableData[]; // ✅ correct type
+  tables: TableData[];
   menuItems: MenuItem[];
   isLoading: boolean;
   discount: number;
@@ -58,7 +59,7 @@ export interface OrderContextType {
   getCartTotal: () => number;
 
   setTableId: (id: number) => void;
-  setTables: (tables: TableData[]) => void; // ✅ FIXED type
+  setTables: (tables: TableData[]) => void;
   addTable: (tableId: number) => Promise<void>;
   deleteTable: (tableId: number) => Promise<void>;
 
@@ -72,4 +73,5 @@ export interface OrderContextType {
   refreshMenuItems: () => Promise<boolean>;
   refreshOrders: () => Promise<boolean>;
   refreshAllData: () => Promise<void>;
+  refreshTables: () => Promise<boolean>;
 }
