@@ -11,9 +11,12 @@ import { toast } from 'sonner';
 const QRGeneratorContent = () => {
   const { isLoading, refreshAllData } = useOrder();
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Function to refresh tables data from context
   const refreshTablesData = useCallback(async () => {
+    if (refreshing) return; // Prevent multiple simultaneous refreshes
+    
     try {
       setRefreshing(true);
       toast.info("Refreshing tables data...");
@@ -25,14 +28,16 @@ const QRGeneratorContent = () => {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshAllData]);
+  }, [refreshAllData, refreshing]);
 
-  // Refresh data when the component is loaded
+  // Refresh data only once when the component is first loaded
   useEffect(() => {
-    if (!isLoading) {
-      refreshTablesData();
+    if (!isLoading && !initialLoadDone) {
+      refreshTablesData().then(() => {
+        setInitialLoadDone(true);
+      });
     }
-  }, [isLoading, refreshTablesData]);
+  }, [isLoading, initialLoadDone, refreshTablesData]);
 
   return (
     <div className="min-h-screen bg-gray-50">

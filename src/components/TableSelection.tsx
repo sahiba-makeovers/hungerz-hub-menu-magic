@@ -23,9 +23,15 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   };
 
   const handleRefresh = async () => {
+    if (isRefreshing) return; // Prevent multiple refreshes
+    
     setIsRefreshing(true);
     try {
-      await refreshAllData();
+      if (onRefresh) {
+        await onRefresh();
+      } else {
+        await refreshAllData();
+      }
       toast.success("Tables refreshed successfully");
     } catch (error) {
       console.error("Error refreshing tables:", error);
