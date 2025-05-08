@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { OrderProvider, useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import TableSelection from '@/components/TableSelection';
 import { toast } from 'sonner';
 
 const QRGeneratorContent = () => {
-  const { isLoading, tables, setTables, refreshAllData } = useOrder();
+  const { isLoading, refreshAllData } = useOrder();
   const [refreshing, setRefreshing] = useState(false);
 
   // Function to refresh tables data from context
@@ -32,12 +33,6 @@ const QRGeneratorContent = () => {
       refreshTablesData();
     }
   }, [isLoading, refreshTablesData]);
-
-  // Function to generate absolute URL for table menu
-  const generateTableUrl = (tableId: number) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/menu?table=${tableId}`;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useOrder } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { QrCode, Download, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 interface TableSelectionProps {
   onRefresh?: () => Promise<void>;
@@ -19,11 +20,6 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
   const generateTableUrl = (tableId: number) => {
     const baseUrl = window.location.origin;
     return `${baseUrl}/menu?table=${tableId}`;
-  };
-
-  const openTableMenu = (tableId: number) => {
-    const url = generateTableUrl(tableId);
-    window.open(url, '_blank');
   };
 
   const handleRefresh = async () => {
@@ -99,16 +95,19 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {tables.sort((a, b) => a - b).map((table) => (
-            <Button
-              key={table}
-              variant={tableId === table ? "default" : "outline"}
-              className={`h-16 text-lg ${tableId === table ? 'bg-hungerzblue text-white' : ''}`}
-              onClick={() => setTableId(table)}
-            >
-              Table {table}
-            </Button>
-          ))}
+          {tables
+            .slice()
+            .sort((a, b) => a.id - b.id)
+            .map((table) => (
+              <Button
+                key={table.id}
+                variant={tableId === table.id ? "default" : "outline"}
+                className={`h-16 text-lg ${tableId === table.id ? 'bg-hungerzblue text-white' : ''}`}
+                onClick={() => setTableId(table.id)}
+              >
+                Table {table.id}
+              </Button>
+            ))}
         </div>
       )}
       
@@ -136,14 +135,15 @@ const TableSelection: React.FC<TableSelectionProps> = ({ onRefresh }) => {
                   QR code URL: {generateTableUrl(tableId)}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2"
-                    onClick={() => openTableMenu(tableId)}
-                  >
-                    <QrCode size={16} />
-                    View Menu
-                  </Button>
+                  <Link to={`/menu?table=${tableId}`} target="_blank">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
+                      <QrCode size={16} />
+                      View Menu
+                    </Button>
+                  </Link>
                   <Button 
                     variant="default"
                     className="flex items-center gap-2 bg-hungerzblue hover:bg-hungerzblue/90"

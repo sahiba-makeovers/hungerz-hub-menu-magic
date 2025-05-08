@@ -1,21 +1,21 @@
-import { MenuItem, Order } from '@/types';
+
+import { MenuItem, Order, TableData } from '@/types';
 
 const BASE_URL = 'http://localhost:5000';
 
 const runtimeCache = {
-  tables: [] as number[],
+  tables: [] as TableData[],
   menuItems: [] as MenuItem[],
   orders: [] as Order[]
 };
 
 // Tables operations
-export async function fetchTables(): Promise<number[]> {
+export async function fetchTables(): Promise<TableData[]> {
   try {
     const res = await fetch(`${BASE_URL}/tables`);
     const data = await res.json();
-    const tableIds = data.map((table: { id: number }) => table.id);
-    runtimeCache.tables = tableIds;
-    return tableIds;
+    runtimeCache.tables = data;
+    return data;
   } catch (error) {
     console.error("Error fetching tables:", error);
     return runtimeCache.tables;
@@ -24,12 +24,13 @@ export async function fetchTables(): Promise<number[]> {
 
 export async function addTable(tableId: number): Promise<boolean> {
   try {
+    const newTable: TableData = { id: tableId };
     await fetch(`${BASE_URL}/tables`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: tableId })
+      body: JSON.stringify(newTable)
     });
-    runtimeCache.tables.push(tableId);
+    runtimeCache.tables.push(newTable);
     return true;
   } catch (error) {
     console.error("Error adding table:", error);
@@ -47,7 +48,6 @@ export async function deleteTable(tableId: number): Promise<boolean> {
     return false;
   }
 }
-
 
 // Menu items operations
 export async function fetchMenuItems(): Promise<MenuItem[]> {
@@ -117,7 +117,7 @@ export async function addOrder(order: Order): Promise<boolean> {
 }
 
 // Initial data getters
-export const getInitialTables = (): number[] => [...runtimeCache.tables];
+export const getInitialTables = (): TableData[] => [...runtimeCache.tables];
 export const getInitialMenuItems = (): MenuItem[] => [...runtimeCache.menuItems];
 
 // Force refresh all data

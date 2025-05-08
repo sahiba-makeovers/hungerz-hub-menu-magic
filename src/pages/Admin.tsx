@@ -3,7 +3,7 @@ import { OrderProvider, useOrder } from "@/contexts/OrderContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Info, Plus, Edit, Trash, Table } from "lucide-react";
+import { ArrowLeft, Info, Plus, Table } from "lucide-react";
 import Logo from "@/components/Logo";
 import OrderItem from "@/components/OrderItem";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { menuCategories, getMenuItemsByCategory } from "@/data/menuData";
+import { menuCategories } from "@/data/menuData";
 import { useToast } from "@/hooks/use-toast";
 import { MenuItem } from "@/types";
 
@@ -114,7 +114,7 @@ const AdminContent = () => {
 
   const onTableSubmit = async (data: z.infer<typeof tableFormSchema>) => {
     const tableNumber = parseInt(data.tableNumber);
-  
+    
     const alreadyExists = tables.some((table) => table.id === tableNumber);
     if (alreadyExists) {
       toast({
@@ -124,17 +124,16 @@ const AdminContent = () => {
       });
       return;
     }
-  
+    
     await addTable(tableNumber);
-    await refreshTables(); // not refreshMenuItems()
+    await refreshTables();
     tableForm.reset();
-  
+    
     toast({
       title: "Success",
       description: `Table ${tableNumber} has been added`,
     });
   };
-  
 
   const onMenuItemSubmit = async (data: z.infer<typeof menuItemFormSchema>) => {
     const newItem: MenuItem = {
@@ -298,7 +297,7 @@ const AdminContent = () => {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                   {tables
-                    .slice() // Create a copy to avoid mutating original
+                    .slice()
                     .sort((a, b) => a.id - b.id)
                     .map((table) => (
                       <Card key={`table-${table.id}`} className="relative">

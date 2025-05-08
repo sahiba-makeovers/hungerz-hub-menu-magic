@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
+import { CartItem, MenuItem, Order, OrderContextType, Coupon, TableData } from '@/types';
 import { toast } from 'sonner';
 import {
   fetchTables, addTable, deleteTable,
@@ -15,7 +15,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cart, setCart] = useState<CartItem[]>([]);
   const [tableId, setTableId] = useState<number | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [tables, setTables] = useState<number[]>(getInitialTables());
+  const [tables, setTables] = useState<TableData[]>(getInitialTables());
   const [menuItems, setMenuItems] = useState<MenuItem[]>(getInitialMenuItems());
   const [discount, setDiscount] = useState<number>(0);
   const [couponCode, setCouponCode] = useState<string | null>(null);
