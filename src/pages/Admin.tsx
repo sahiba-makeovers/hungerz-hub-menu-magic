@@ -1,42 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { OrderProvider, useOrder } from '@/contexts/OrderContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Info, Plus, Edit, Trash, Table } from 'lucide-react';
-import Logo from '@/components/Logo';
-import OrderItem from '@/components/OrderItem';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { menuCategories, getMenuItemsByCategory } from '@/data/menuData';
-import { useToast } from '@/hooks/use-toast';
-import { MenuItem } from '@/types';
+import React, { useState, useEffect } from "react";
+import { OrderProvider, useOrder } from "@/contexts/OrderContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Info, Plus, Edit, Trash, Table } from "lucide-react";
+import Logo from "@/components/Logo";
+import OrderItem from "@/components/OrderItem";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { menuCategories, getMenuItemsByCategory } from "@/data/menuData";
+import { useToast } from "@/hooks/use-toast";
+import { MenuItem } from "@/types";
 
 const tableFormSchema = z.object({
-  tableNumber: z.string().refine(val => {
-    const num = parseInt(val);
-    return !isNaN(num) && num > 0;
-  }, { message: "Please enter a valid table number" })
+  tableNumber: z.string().refine(
+    (val) => {
+      const num = parseInt(val);
+      return !isNaN(num) && num > 0;
+    },
+    { message: "Please enter a valid table number" }
+  ),
 });
 
 const menuItemFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  price: z.string().refine(val => {
-    const num = parseFloat(val);
-    return !isNaN(num) && num > 0;
-  }, { message: "Please enter a valid price" }),
+  price: z.string().refine(
+    (val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    },
+    { message: "Please enter a valid price" }
+  ),
   category: z.string().min(1, { message: "Please select a category" }),
   description: z.string().optional(),
 });
 
 const AdminContent = () => {
-  const { orders, tables, addTable, deleteTable, addMenuItem, deleteMenuItem, menuItems } = useOrder();
+  const {
+    orders,
+    tables,
+    addTable,
+    deleteTable,
+    addMenuItem,
+    deleteMenuItem,
+    menuItems,
+    refreshTables,
+    refreshMenuItems,
+  } = useOrder();
   const [activeTab, setActiveTab] = useState("pending");
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,7 +81,7 @@ const AdminContent = () => {
     resolver: zodResolver(tableFormSchema),
     defaultValues: {
       tableNumber: "",
-    }
+    },
   });
 
   const menuItemForm = useForm<z.infer<typeof menuItemFormSchema>>({
@@ -55,54 +91,61 @@ const AdminContent = () => {
       price: "",
       category: "",
       description: "",
-    }
+    },
   });
 
   useEffect(() => {
-    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
-    if (adminLoggedIn !== 'true') {
-      navigate('/login');
+    const adminLoggedIn = localStorage.getItem("adminLoggedIn");
+    if (adminLoggedIn !== "true") {
+      navigate("/login");
     }
   }, [navigate]);
 
-  const pendingOrders = orders.filter(order => order.status === 'PENDING');
-  const cookingOrders = orders.filter(order => order.status === 'COOKING');
-  const deliveredOrders = orders.filter(order => order.status === 'DELIVERED');
+  const pendingOrders = orders.filter((order) => order.status === "PENDING");
+  const cookingOrders = orders.filter((order) => order.status === "COOKING");
+  const deliveredOrders = orders.filter(
+    (order) => order.status === "DELIVERED"
+  );
 
   const handleLogout = () => {
-    localStorage.removeItem('adminLoggedIn');
-    navigate('/login');
+    localStorage.removeItem("adminLoggedIn");
+    navigate("/login");
   };
 
-  const onTableSubmit = (data: z.infer<typeof tableFormSchema>) => {
+  const onTableSubmit = async (data: z.infer<typeof tableFormSchema>) => {
     const tableNumber = parseInt(data.tableNumber);
-    if (tables.includes(tableNumber)) {
+  
+    const alreadyExists = tables.some((table) => table.id === tableNumber);
+    if (alreadyExists) {
       toast({
         title: "Error",
         description: `Table ${tableNumber} already exists`,
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
-    addTable(tableNumber);
+  
+    await addTable(tableNumber);
+    await refreshTables(); // not refreshMenuItems()
     tableForm.reset();
+  
     toast({
       title: "Success",
       description: `Table ${tableNumber} has been added`,
     });
   };
+  
 
-  const onMenuItemSubmit = (data: z.infer<typeof menuItemFormSchema>) => {
+  const onMenuItemSubmit = async (data: z.infer<typeof menuItemFormSchema>) => {
     const newItem: MenuItem = {
       id: `custom-${Date.now()}`,
       name: data.name,
       price: parseFloat(data.price),
       category: data.category,
-      description: data.description || '',
+      description: data.description || "",
     };
-    
-    addMenuItem(newItem);
+    await addMenuItem(newItem);
+    await refreshMenuItems();
     menuItemForm.reset();
     toast({
       title: "Success",
@@ -115,7 +158,10 @@ const AdminContent = () => {
       <header className="bg-white shadow-sm p-4">
         <div className="container mx-auto flex justify-between items-center">
           <Link to="/">
-            <Button variant="ghost" className="flex items-center gap-1 text-hungerzblue hover:text-hungerzorange">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-1 text-hungerzblue hover:text-hungerzorange"
+            >
               <ArrowLeft size={18} />
               Back to Home
             </Button>
@@ -129,11 +175,17 @@ const AdminContent = () => {
 
       <main className="container mx-auto p-4 py-8 max-w-6xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-hungerzblue mb-2">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-hungerzblue mb-2">
+            Admin Dashboard
+          </h1>
           <p className="text-gray-600">Manage orders, tables, and menu items</p>
         </div>
 
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          defaultValue={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
           <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-6">
             <TabsTrigger value="pending" className="relative">
               Pending
@@ -165,7 +217,7 @@ const AdminContent = () => {
                   <p className="text-sm">New orders will appear here</p>
                 </div>
               ) : (
-                pendingOrders.map(order => (
+                pendingOrders.map((order) => (
                   <OrderItem key={order.id} order={order} />
                 ))
               )}
@@ -178,10 +230,12 @@ const AdminContent = () => {
                 <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
                   <Info size={48} className="mb-4 text-gray-400" />
                   <h3 className="text-lg font-medium">No orders in cooking</h3>
-                  <p className="text-sm">Orders being prepared will appear here</p>
+                  <p className="text-sm">
+                    Orders being prepared will appear here
+                  </p>
                 </div>
               ) : (
-                cookingOrders.map(order => (
+                cookingOrders.map((order) => (
                   <OrderItem key={order.id} order={order} />
                 ))
               )}
@@ -197,7 +251,7 @@ const AdminContent = () => {
                   <p className="text-sm">Completed orders will appear here</p>
                 </div>
               ) : (
-                deliveredOrders.map(order => (
+                deliveredOrders.map((order) => (
                   <OrderItem key={order.id} order={order} />
                 ))
               )}
@@ -212,24 +266,30 @@ const AdminContent = () => {
               <CardContent>
                 <div className="mb-6">
                   <Form {...tableForm}>
-                    <form onSubmit={tableForm.handleSubmit(onTableSubmit)} className="flex flex-col sm:flex-row gap-4">
+                    <form
+                      onSubmit={tableForm.handleSubmit(onTableSubmit)}
+                      className="flex flex-col sm:flex-row gap-4"
+                    >
                       <FormField
                         control={tableForm.control}
                         name="tableNumber"
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormControl>
-                              <Input 
-                                placeholder="Enter table number" 
-                                type="number" 
-                                {...field} 
+                              <Input
+                                placeholder="Enter table number"
+                                type="number"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <Button type="submit" className="bg-hungerzblue hover:bg-hungerzblue/90">
+                      <Button
+                        type="submit"
+                        className="bg-hungerzblue hover:bg-hungerzblue/90"
+                      >
                         Add Table
                       </Button>
                     </form>
@@ -237,22 +297,34 @@ const AdminContent = () => {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                  {tables.sort((a, b) => a - b).map((table) => (
-                    <Card key={table} className="relative">
-                      <CardContent className="flex flex-col items-center justify-center p-4">
-                        <Table size={24} className="mb-2 text-hungerzblue" />
-                        <p className="text-lg font-semibold">Table {table}</p>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="mt-2" 
-                          onClick={() => deleteTable(table)}
-                        >
-                          Remove
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {tables
+                    .slice() // Create a copy to avoid mutating original
+                    .sort((a, b) => a.id - b.id)
+                    .map((table) => (
+                      <Card key={`table-${table.id}`} className="relative">
+                        <CardContent className="flex flex-col items-center justify-center p-4">
+                          <Table size={24} className="mb-2 text-hungerzblue" />
+                          <p className="text-lg font-semibold">
+                            Table {table.id}
+                          </p>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="mt-2"
+                            onClick={async () => {
+                              try {
+                                await deleteTable(table.id);
+                                await refreshTables();
+                              } catch (err) {
+                                console.error("Failed to delete table:", err);
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               </CardContent>
             </Card>
@@ -276,7 +348,10 @@ const AdminContent = () => {
                       <DialogTitle>Add New Menu Item</DialogTitle>
                     </DialogHeader>
                     <Form {...menuItemForm}>
-                      <form onSubmit={menuItemForm.handleSubmit(onMenuItemSubmit)} className="space-y-4">
+                      <form
+                        onSubmit={menuItemForm.handleSubmit(onMenuItemSubmit)}
+                        className="space-y-4"
+                      >
                         <FormField
                           control={menuItemForm.control}
                           name="name"
@@ -284,13 +359,16 @@ const AdminContent = () => {
                             <FormItem>
                               <FormLabel>Item Name</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter item name" {...field} />
+                                <Input
+                                  placeholder="Enter item name"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={menuItemForm.control}
                           name="price"
@@ -298,20 +376,28 @@ const AdminContent = () => {
                             <FormItem>
                               <FormLabel>Price</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter price" type="number" step="0.01" {...field} />
+                                <Input
+                                  placeholder="Enter price"
+                                  type="number"
+                                  step="0.01"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={menuItemForm.control}
                           name="category"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Category</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select a category" />
@@ -319,7 +405,10 @@ const AdminContent = () => {
                                 </FormControl>
                                 <SelectContent>
                                   {menuCategories.map((category) => (
-                                    <SelectItem key={category.id} value={category.name}>
+                                    <SelectItem
+                                      key={`${category.id}-${category.name}`}
+                                      value={category.name}
+                                    >
                                       {category.displayName}
                                     </SelectItem>
                                   ))}
@@ -329,7 +418,7 @@ const AdminContent = () => {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={menuItemForm.control}
                           name="description"
@@ -337,15 +426,21 @@ const AdminContent = () => {
                             <FormItem>
                               <FormLabel>Description (Optional)</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter description" {...field} />
+                                <Input
+                                  placeholder="Enter description"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        
+
                         <DialogFooter>
-                          <Button type="submit" className="w-full bg-hungerzblue hover:bg-hungerzblue/90">
+                          <Button
+                            type="submit"
+                            className="w-full bg-hungerzblue hover:bg-hungerzblue/90"
+                          >
                             Add Item
                           </Button>
                         </DialogFooter>
@@ -356,32 +451,47 @@ const AdminContent = () => {
 
                 <div className="space-y-6">
                   {menuCategories.map((category) => {
-                    const itemsInCategory = menuItems.filter(item => item.category === category.name);
+                    const itemsInCategory = menuItems.filter(
+                      (item) => item.category === category.name
+                    );
                     if (itemsInCategory.length === 0) return null;
-                    
+
                     return (
-                      <div key={category.id} className="border rounded-lg p-4">
-                        <h3 className="font-bold text-hungerzblue text-lg mb-4">{category.displayName}</h3>
+                      <div
+                        key={`${category.id}-${category.name}`}
+                        className="border rounded-lg p-4"
+                      >
+                        <h3 className="font-bold text-hungerzblue text-lg mb-4">
+                          {category.displayName}
+                        </h3>
                         <div className="divide-y">
                           {itemsInCategory.map((item) => (
-                            <div key={item.id} className="py-3 flex justify-between items-center">
+                            <div
+                              key={item.id}
+                              className="py-3 flex justify-between items-center"
+                            >
                               <div>
                                 <h4 className="font-medium">{item.name}</h4>
-                                {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
+                                {item.description && (
+                                  <p className="text-sm text-gray-600">
+                                    {item.description}
+                                  </p>
+                                )}
                                 <p className="text-hungerzorange">
-                                  ₹{typeof item.price === 'object' 
-                                    ? `${item.price.half} (Half) / ₹${item.price.full} (Full)` 
+                                  ₹
+                                  {typeof item.price === "object"
+                                    ? `${item.price.half} (Half) / ₹${item.price.full} (Full)`
                                     : item.price}
                                 </p>
                               </div>
-                              <Button 
-                                variant="destructive" 
+                              <Button
+                                variant="destructive"
                                 size="sm"
                                 onClick={() => {
                                   deleteMenuItem(item.id);
                                   toast({
                                     title: "Item deleted",
-                                    description: `${item.name} has been removed from the menu`
+                                    description: `${item.name} has been removed from the menu`,
                                   });
                                 }}
                               >

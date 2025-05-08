@@ -1,99 +1,89 @@
-
 import { MenuItem, Order } from '@/types';
-import * as fileStorage from './fileStorage';
 
-// Initial data paths
-const FILES = {
-  TABLES: '/data/tables.json',
-  MENU_ITEMS: '/data/menu.json',
-  ORDERS: '/data/orders.json'
-};
+const BASE_URL = 'http://localhost:5000';
 
-// Runtime memory cache
 const runtimeCache = {
   tables: [] as number[],
   menuItems: [] as MenuItem[],
   orders: [] as Order[]
 };
 
-// Initialize storage
-const initializeStorage = async () => {
-  try {
-    // Load data from JSON files
-    const [tables, menuItems, orders] = await Promise.all([
-      fileStorage.fetchTables(),
-      fileStorage.fetchMenuItems(),
-      fileStorage.fetchOrders()
-    ]);
-    
-    // Initialize runtime cache
-    runtimeCache.tables = [...tables];
-    runtimeCache.menuItems = [...menuItems];
-    runtimeCache.orders = [...orders];
-    
-    console.log('Storage initialized with data from JSON files');
-  } catch (error) {
-    console.error("Error initializing storage:", error);
-  }
-};
-
-// Run initialization
-initializeStorage();
-
 // Tables operations
 export async function fetchTables(): Promise<number[]> {
   try {
-    const tables = await fileStorage.fetchTables();
-    runtimeCache.tables = [...tables];
-    return tables;
+    const res = await fetch(`${BASE_URL}/tables`);
+    const data = await res.json();
+    const tableIds = data.map((table: { id: number }) => table.id);
+    runtimeCache.tables = tableIds;
+    return tableIds;
   } catch (error) {
     console.error("Error fetching tables:", error);
     return runtimeCache.tables;
   }
 }
 
-export async function saveTables(tables: number[]): Promise<boolean> {
+export async function addTable(tableId: number): Promise<boolean> {
   try {
-    // Update the runtime cache
-    runtimeCache.tables = [...tables];
-    
-    // Save to JSON file (simulated)
-    await fileStorage.saveTables(tables);
-    
-    console.log("Tables updated:", tables);
-    
+    await fetch(`${BASE_URL}/tables`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: tableId })
+    });
+    runtimeCache.tables.push(tableId);
     return true;
   } catch (error) {
-    console.error("Error saving tables:", error);
+    console.error("Error adding table:", error);
     return false;
   }
 }
 
+export async function deleteTable(tableId: number): Promise<boolean> {
+  try {
+    await fetch(`${BASE_URL}/tables/${tableId}`, { method: 'DELETE' });
+    runtimeCache.tables = runtimeCache.tables.filter(table => table.id !== tableId);
+    return true;
+  } catch (error) {
+    console.error("Error deleting table:", error);
+    return false;
+  }
+}
+
+
 // Menu items operations
 export async function fetchMenuItems(): Promise<MenuItem[]> {
   try {
-    const menuItems = await fileStorage.fetchMenuItems();
-    runtimeCache.menuItems = [...menuItems];
-    return menuItems;
+    const res = await fetch(`${BASE_URL}/menuItems`);
+    const data = await res.json();
+    runtimeCache.menuItems = data;
+    return data;
   } catch (error) {
     console.error("Error fetching menu items:", error);
     return runtimeCache.menuItems;
   }
 }
 
-export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
+export async function addMenuItem(item: MenuItem): Promise<boolean> {
   try {
-    // Update the runtime cache
-    runtimeCache.menuItems = [...menuItems];
-    
-    // Save to JSON file (simulated)
-    await fileStorage.saveMenuItems(menuItems);
-    
-    console.log("Menu items updated:", menuItems);
-    
+    await fetch(`${BASE_URL}/menuItems`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+    runtimeCache.menuItems.push(item);
     return true;
   } catch (error) {
-    console.error("Error saving menu items:", error);
+    console.error("Error saving menu item:", error);
+    return false;
+  }
+}
+
+export async function deleteMenuItem(id: string): Promise<boolean> {
+  try {
+    await fetch(`${BASE_URL}/menuItems/${id}`, { method: 'DELETE' });
+    runtimeCache.menuItems = runtimeCache.menuItems.filter(item => item.id !== id);
+    return true;
+  } catch (error) {
+    console.error("Error deleting menu item:", error);
     return false;
   }
 }
@@ -101,56 +91,46 @@ export async function saveMenuItems(menuItems: MenuItem[]): Promise<boolean> {
 // Orders operations
 export async function fetchOrders(): Promise<Order[]> {
   try {
-    const orders = await fileStorage.fetchOrders();
-    runtimeCache.orders = [...orders];
-    return orders;
+    const res = await fetch(`${BASE_URL}/orders`);
+    const data = await res.json();
+    runtimeCache.orders = data;
+    return data;
   } catch (error) {
     console.error("Error fetching orders:", error);
     return runtimeCache.orders;
   }
 }
 
-export async function saveOrders(orders: Order[]): Promise<boolean> {
+export async function addOrder(order: Order): Promise<boolean> {
   try {
-    // Update the runtime cache
-    runtimeCache.orders = [...orders];
-    
-    // Save to JSON file (simulated)
-    await fileStorage.saveOrders(orders);
-    
-    console.log("Orders updated:", orders);
-    
+    await fetch(`${BASE_URL}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    });
+    runtimeCache.orders.push(order);
     return true;
   } catch (error) {
-    console.error("Error saving orders:", error);
+    console.error("Error saving order:", error);
     return false;
   }
 }
 
 // Initial data getters
-export const getInitialTables = (): number[] => {
-  return [...runtimeCache.tables];
-};
+export const getInitialTables = (): number[] => [...runtimeCache.tables];
+export const getInitialMenuItems = (): MenuItem[] => [...runtimeCache.menuItems];
 
-export const getInitialMenuItems = (): MenuItem[] => {
-  return [...runtimeCache.menuItems];
-};
-
-// Force refresh all data from JSON files
-export const forceRefresh = async () => {
+// Force refresh all data
+export const forceRefresh = async (): Promise<boolean> => {
   try {
-    // Reload from JSON files
     const [tables, menuItems, orders] = await Promise.all([
-      fileStorage.fetchTables(),
-      fileStorage.fetchMenuItems(),
-      fileStorage.fetchOrders()
+      fetchTables(),
+      fetchMenuItems(),
+      fetchOrders()
     ]);
-    
-    // Update runtime cache
-    runtimeCache.tables = [...tables];
-    runtimeCache.menuItems = [...menuItems];
-    runtimeCache.orders = [...orders];
-    
+    runtimeCache.tables = tables;
+    runtimeCache.menuItems = menuItems;
+    runtimeCache.orders = orders;
     return true;
   } catch (error) {
     console.error("Error during force refresh:", error);
@@ -158,17 +138,10 @@ export const forceRefresh = async () => {
   }
 };
 
-// Clear cache and reset to initial data from JSON files
+// Clear cache
 export const clearCache = () => {
   runtimeCache.tables = [];
   runtimeCache.menuItems = [];
   runtimeCache.orders = [];
-  
-  // Clear localStorage
-  fileStorage.clearStorage();
-  
-  // Reinitialize from JSON files
-  initializeStorage();
-  
   console.log("Runtime cache cleared");
 };

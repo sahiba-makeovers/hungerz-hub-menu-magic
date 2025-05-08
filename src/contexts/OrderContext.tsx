@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon } from '@/types';
 import { toast } from 'sonner';
-import { 
-  fetchTables, saveTables, 
-  fetchMenuItems, saveMenuItems,
-  fetchOrders, saveOrders,
+import {
+  fetchTables, addTable, deleteTable,
+  fetchMenuItems, addMenuItem, deleteMenuItem,
+  fetchOrders, addOrder,
   getInitialTables, getInitialMenuItems,
   clearCache, forceRefresh
 } from '@/utils/dataStorage';
@@ -59,6 +59,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const refreshTables = useCallback(async (): Promise<boolean> => {
+    try {
+      const data = await fetchTables();
+      setTables(data);
+      return true;
+    } catch (error) {
+      console.error("Failed to refresh tables:", error);
+      return false;
+    }
+  }, []);
+
   const refreshOrders = useCallback(async (): Promise<boolean> => {
     try {
       const newOrders = await fetchOrders();
@@ -73,24 +84,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     refreshAllData();
   }, [refreshAllData]);
-
-  useEffect(() => {
-    if (dataInitialized && orders.length > 0) {
-      saveOrders(orders);
-    }
-  }, [orders, dataInitialized]);
-
-  useEffect(() => {
-    if (dataInitialized && tables.length > 0) {
-      saveTables(tables);
-    }
-  }, [tables, dataInitialized]);
-  
-  useEffect(() => {
-    if (dataInitialized && menuItems.length > 0) {
-      saveMenuItems(menuItems);
-    }
-  }, [menuItems, dataInitialized]);
 
   const addToCart = (item: MenuItem, quantity: number, variant?: 'half' | 'full', notes?: string) => {
     setCart((prevCart) => {
@@ -114,12 +107,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const removeFromCart = (itemId: string, variant?: 'half' | 'full') => {
     setCart((prevCart) => {
-      const updatedCart = prevCart.filter(
+      return prevCart.filter(
         (item) => 
           !(item.menuItem.id === itemId && 
             (typeof item.menuItem.price !== 'object' || item.variant === variant))
       );
-      return updatedCart;
     });
   };
 
@@ -160,10 +152,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getDiscountedTotal = () => {
     const total = getCartTotal();
-    if (discount > 0) {
-      return total * (1 - discount / 100);
-    }
-    return total;
+    return discount > 0 ? total * (1 - discount / 100) : total;
   };
 
   const placeOrder = async () => {
@@ -187,18 +176,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     try {
-      await refreshOrders();
-      
-      const updatedOrders = [...orders, newOrder];
-      setOrders(updatedOrders);
-      
-      try {
-        await saveOrders(updatedOrders);
-      } catch (error) {
-        console.error("Failed to save new order:", error);
-        toast.error('Order saved locally but not synced to server. Please try refreshing.');
-      }
-      
+      await addOrder(newOrder);
+      setOrders((prev) => [...prev, newOrder]);
       clearCart();
       setDiscount(0);
       setCouponCode(null);
@@ -211,142 +190,63 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateOrderStatus = async (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
     try {
-      await refreshOrders();
-      
-      const updatedOrders = orders.map(order => {
-        if (order.id === orderId) {
-          return { ...order, status };
-        }
-        return order;
-      });
-      
+      const updatedOrders = orders.map(order =>
+        order.id === orderId ? { ...order, status } : order
+      );
       setOrders(updatedOrders);
-      
-      try {
-        await saveOrders(updatedOrders);
-        toast.success(`Order status updated to ${status}`);
-      } catch (error) {
-        console.error("Failed to update order status:", error);
-        toast.error('Status updated locally but not synced to server. Please refresh.');
-      }
+      toast.success(`Order status updated to ${status}`);
     } catch (error) {
       console.error("Error updating order status:", error);
       toast.error('Failed to update order status. Please try again.');
     }
   };
 
-  const addTable = async (tableId: number) => {
+  const handleAddTable = async (id: number) => {
     try {
-      const freshTables = await fetchTables();
-      
-      if (freshTables.includes(tableId)) {
-        toast.error(`Table ${tableId} already exists`);
-        return;
-      }
-      
-      const updatedTables = [...tables, tableId].sort((a, b) => a - b);
-      setTables(updatedTables);
-      
-      try {
-        await saveTables(updatedTables);
-        
-        console.log(`Table ${tableId} added, file update simulated`);
-        
-        toast.success(`Table ${tableId} added successfully`);
-      } catch (error) {
-        console.error("Failed to save new table:", error);
-        toast.error('Failed to add table. Please try again.');
-      }
-    } catch (error) {
-      console.error("Error adding table:", error);
-      toast.error('Failed to add table. Please try again.');
+      await addTable(id);
+      await refreshTables();
+      toast.success(`Table ${id} added successfully`);
+    } catch {
+      toast.error('Failed to add table');
     }
   };
 
-  const deleteTable = async (tableId: number) => {
+  const handleDeleteTable = async (id: number) => {
     try {
-      await fetchTables();
-      
-      const updatedTables = tables.filter(id => id !== tableId);
-      setTables(updatedTables);
-      
-      try {
-        await saveTables(updatedTables);
-        
-        console.log(`Table ${tableId} removed, file update simulated`);
-        
-        toast.success(`Table ${tableId} removed successfully`);
-      } catch (error) {
-        console.error("Failed to delete table:", error);
-        toast.error('Failed to remove table. Please try again.');
-      }
-    } catch (error) {
-      console.error("Error removing table:", error);
-      toast.error('Failed to remove table. Please try again.');
+      await deleteTable(id);
+      await refreshTables();
+      toast.success(`Table ${id} removed successfully`);
+    } catch {
+      toast.error('Failed to remove table');
     }
   };
 
-  const addMenuItem = async (item: MenuItem) => {
+  const handleAddMenuItem = async (item: MenuItem) => {
     try {
+      await addMenuItem(item);
       await refreshMenuItems();
-      
-      const updatedMenuItems = [...menuItems, item];
-      setMenuItems(updatedMenuItems);
-      
-      try {
-        await saveMenuItems(updatedMenuItems);
-        
-        console.log(`Menu item ${item.name} added, file update simulated`);
-        
-        toast.success(`${item.name} added to menu successfully`);
-      } catch (error) {
-        console.error("Failed to save new menu item:", error);
-        toast.error('Failed to add menu item. Please try again.');
-      }
-    } catch (error) {
-      console.error("Error adding menu item:", error);
-      toast.error('Failed to add menu item. Please try again.');
+      toast.success(`${item.name} added to menu`);
+    } catch {
+      toast.error('Failed to add menu item');
     }
   };
 
-  const deleteMenuItem = async (itemId: string) => {
+  const handleDeleteMenuItem = async (id: string) => {
     try {
+      await deleteMenuItem(id);
       await refreshMenuItems();
-      
-      const updatedMenuItems = menuItems.filter(item => item.id !== itemId);
-      setMenuItems(updatedMenuItems);
-      
-      try {
-        await saveMenuItems(updatedMenuItems);
-        
-        console.log(`Menu item ${itemId} removed, file update simulated`);
-        
-        toast.success(`Menu item removed successfully`);
-      } catch (error) {
-        console.error("Failed to delete menu item:", error);
-        toast.error('Failed to remove menu item. Please try again.');
-      }
-    } catch (error) {
-      console.error("Error removing menu item:", error);
-      toast.error('Failed to remove menu item. Please try again.');
+      toast.success(`Menu item removed successfully`);
+    } catch {
+      toast.error('Failed to remove menu item');
     }
   };
 
   const applyCoupon = (code: string): { success: boolean; message: string } => {
-    const coupon = availableCoupons.find(
-      c => c.code.toLowerCase() === code.toLowerCase()
-    );
-    
-    if (!coupon) {
-      return { success: false, message: `Invalid coupon code: ${code}` };
-    }
-
+    const coupon = availableCoupons.find(c => c.code.toLowerCase() === code.toLowerCase());
+    if (!coupon) return { success: false, message: `Invalid coupon code: ${code}` };
     setDiscount(coupon.discount);
     setCouponCode(coupon.code);
-    return { 
-      success: true, 
-      message: `${coupon.discount}% discount applied successfully` 
-    };
+    return { success: true, message: `${coupon.discount}% discount applied` };
   };
 
   return (
@@ -365,18 +265,19 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         getCartTotal,
         tables,
         setTables,
-        addTable,
-        deleteTable,
+        addTable: handleAddTable,
+        deleteTable: handleDeleteTable,
         menuItems,
-        addMenuItem,
-        deleteMenuItem,
+        addMenuItem: handleAddMenuItem,
+        deleteMenuItem: handleDeleteMenuItem,
         applyCoupon,
         discount,
         couponCode,
         isLoading,
         refreshMenuItems,
         refreshOrders,
-        refreshAllData
+        refreshAllData,
+        refreshTables
       }}
     >
       {children}

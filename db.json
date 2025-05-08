@@ -1,0 +1,42 @@
+{
+  "tables": [
+    {
+      "id": 2
+    },
+    {
+      "id": 12
+    },
+    {
+      "id": 122
+    },
+    {
+      "id": 1123
+    },
+    {
+      "id": 12
+    },
+    {
+      "id": 121
+    },
+    {
+      "id": 1223
+    }
+  ],
+  "menuItems": [
+    {
+      "id": "custom-1746687765372",
+      "name": "Margherita Pizza",
+      "price": 100,
+      "category": "pizza",
+      "description": "Classic cheesy delight"
+    },
+    {
+      "id": "custom-1746687765370",
+      "name": "shubham miglani",
+      "price": 100,
+      "category": "garlic-bread",
+      "description": "qwerty"
+    }
+  ],
+  "orders": []
+}
