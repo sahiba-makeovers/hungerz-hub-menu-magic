@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchMenuItems } from '@/utils/dataStorage';
 
 const MenuContent = () => {
-  const { cart, tableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems, refreshAllData } = useOrder();
+  const { cart, tableId, setTableId, applyCoupon, discount, couponCode, menuItems, refreshMenuItems, refreshAllData } = useOrder();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponDialogOpen, setCouponDialogOpen] = useState(false);
   const [inputCoupon, setInputCoupon] = useState('');
@@ -38,18 +38,25 @@ const MenuContent = () => {
     const params = new URLSearchParams(window.location.search);
     const tableParam = params.get('table');
     
-    if (tableParam && !tableId) {
-      // Display a welcome notification
-      setNotification(`Welcome to Table ${tableParam}! Browse our menu and place your order.`);
+    if (tableParam) {
+      const tableNumber = parseInt(tableParam, 10);
       
-      // Hide notification after 5 seconds
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
+      // Only set table ID if it's a valid number
+      if (!isNaN(tableNumber)) {
+        setTableId(tableNumber);
+        
+        // Display a welcome notification
+        setNotification(`Welcome to Table ${tableNumber}! Browse our menu and place your order.`);
+        
+        // Hide notification after 5 seconds
+        const timer = setTimeout(() => {
+          setNotification(null);
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+      }
     }
-  }, [tableId]);
+  }, [setTableId]);
 
   // Function to refresh menu data with enhanced reliability
   const refreshMenuData = async () => {
