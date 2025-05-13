@@ -19,7 +19,7 @@ const CategoryNav = () => {
         if (element) {
           const rect = element.getBoundingClientRect();
           // Adjust threshold based on screen size
-          const threshold = isMobile ? 150 : 200;
+          const threshold = isMobile ? 120 : 200;
           if (rect.top <= threshold && rect.bottom >= threshold) {
             setActiveCategory(categoryId);
             // Scroll active button into view in the nav bar
@@ -59,7 +59,7 @@ const CategoryNav = () => {
     const element = document.getElementById(categoryId);
     if (element) {
       // Calculate the offset for fixed header
-      const headerOffset = isMobile ? 140 : 120;
+      const headerOffset = isMobile ? 110 : 120;
       const elementPosition = element.getBoundingClientRect().top + window.scrollY;
       const offsetPosition = elementPosition - headerOffset;
       
@@ -76,7 +76,7 @@ const CategoryNav = () => {
       <ScrollArea className="max-w-full">
         <div 
           ref={navRef}
-          className="flex py-2 px-4 overflow-x-auto gap-2 scrollbar-hide"
+          className="flex py-1 sm:py-2 px-2 sm:px-4 overflow-x-auto gap-1 sm:gap-2 scrollbar-hide"
         >
           {menuCategories.map((category) => {
             const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -86,7 +86,7 @@ const CategoryNav = () => {
                 data-category={categoryId}
                 variant={activeCategory === categoryId ? "default" : "ghost"}
                 size={isMobile ? "sm" : "default"}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => scrollToCategory(categoryId)}
               >
                 {category.displayName}

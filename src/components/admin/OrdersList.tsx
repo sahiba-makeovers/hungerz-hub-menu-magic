@@ -3,6 +3,7 @@ import React from "react";
 import { Info } from "lucide-react";
 import { Order } from "@/types";
 import OrderItem from "@/components/OrderItem";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface OrdersListProps {
   orders: Order[];
@@ -11,6 +12,7 @@ interface OrdersListProps {
 
 const OrdersList: React.FC<OrdersListProps> = ({ orders, status }) => {
   const filteredOrders = orders.filter((order) => order.status === status);
+  const isMobile = useIsMobile();
   
   const getStatusMessage = () => {
     switch (status) {
@@ -33,10 +35,10 @@ const OrdersList: React.FC<OrdersListProps> = ({ orders, status }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
       {filteredOrders.length === 0 ? (
-        <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
-          <Info size={48} className="mb-4 text-gray-400" />
+        <div className="col-span-full flex flex-col items-center justify-center py-8 sm:py-12 text-gray-500">
+          <Info size={40} className="mb-3 text-gray-400" />
           <h3 className="text-lg font-medium">{getStatusMessage().title}</h3>
           <p className="text-sm">{getStatusMessage().description}</p>
         </div>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { TableData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TablesManagerProps {
   tables: TableData[];
@@ -35,6 +36,7 @@ const TablesManager: React.FC<TablesManagerProps> = ({
   refreshTables 
 }) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const form = useForm<z.infer<typeof tableFormSchema>>({
     resolver: zodResolver(tableFormSchema),
@@ -68,15 +70,15 @@ const TablesManager: React.FC<TablesManagerProps> = ({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Manage Tables</CardTitle>
+      <CardHeader className="pb-2 sm:pb-4">
+        <CardTitle className="text-lg sm:text-xl">Manage Tables</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-2 sm:gap-4"
             >
               <FormField
                 control={form.control}
@@ -87,6 +89,7 @@ const TablesManager: React.FC<TablesManagerProps> = ({
                       <Input
                         placeholder="Enter table number"
                         type="number"
+                        className="h-9 sm:h-10"
                         {...field}
                       />
                     </FormControl>
@@ -96,7 +99,7 @@ const TablesManager: React.FC<TablesManagerProps> = ({
               />
               <Button
                 type="submit"
-                className="bg-hungerzblue hover:bg-hungerzblue/90"
+                className="bg-hungerzblue hover:bg-hungerzblue/90 h-9 sm:h-10"
               >
                 Add Table
               </Button>
@@ -104,21 +107,21 @@ const TablesManager: React.FC<TablesManagerProps> = ({
           </Form>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-4`}>
           {tables
             .slice()
             .sort((a, b) => a.id - b.id)
             .map((table) => (
               <Card key={`table-${table.id}`} className="relative">
-                <CardContent className="flex flex-col items-center justify-center p-4">
-                  <Table size={24} className="mb-2 text-hungerzblue" />
-                  <p className="text-lg font-semibold">
+                <CardContent className="flex flex-col items-center justify-center p-3 sm:p-4">
+                  <Table size={isMobile ? 20 : 24} className="mb-1 sm:mb-2 text-hungerzblue" />
+                  <p className="text-base sm:text-lg font-semibold">
                     Table {table.id}
                   </p>
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="mt-2"
+                    className="mt-2 text-xs sm:text-sm px-2 py-0 h-7 sm:h-8"
                     onClick={async () => {
                       try {
                         await deleteTable(table.id);

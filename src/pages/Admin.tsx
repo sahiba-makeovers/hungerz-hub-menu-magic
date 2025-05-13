@@ -8,6 +8,7 @@ import AdminFooter from "@/components/admin/AdminFooter";
 import OrdersList from "@/components/admin/OrdersList";
 import TablesManager from "@/components/admin/TablesManager";
 import MenuItemManager from "@/components/admin/MenuItemManager";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AdminContent = () => {
   const {
@@ -23,6 +24,7 @@ const AdminContent = () => {
   } = useOrder();
   const [activeTab, setActiveTab] = useState("pending");
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const adminLoggedIn = localStorage.getItem("adminLoggedIn");
@@ -46,12 +48,12 @@ const AdminContent = () => {
     <div className="min-h-screen bg-gray-50">
       <AdminHeader onLogout={handleLogout} />
 
-      <main className="container mx-auto p-4 py-8 max-w-6xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-hungerzblue mb-2">
+      <main className="container mx-auto p-2 sm:p-4 py-4 sm:py-8 max-w-6xl">
+        <div className="text-center mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-hungerzblue mb-1 sm:mb-2">
             Admin Dashboard
           </h1>
-          <p className="text-gray-600">Manage orders, tables, and menu items</p>
+          <p className="text-sm sm:text-base text-gray-600">Manage orders, tables, and menu items</p>
         </div>
 
         <Tabs
@@ -59,27 +61,38 @@ const AdminContent = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-6">
-            <TabsTrigger value="pending" className="relative">
+          <TabsList className={`grid ${isMobile ? 'grid-cols-3 mb-3' : 'sm:grid-cols-5 mb-6'} w-full`}>
+            <TabsTrigger value="pending" className="relative text-xs sm:text-sm">
               Pending
               {pendingOrders.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-hungerzorange text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                <span className="absolute -top-2 -right-2 bg-hungerzorange text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs">
                   {pendingOrders.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="cooking">
+            <TabsTrigger value="cooking" className="relative text-xs sm:text-sm">
               Cooking
               {cookingOrders.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                <span className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs">
                   {cookingOrders.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="delivered">Delivered</TabsTrigger>
-            <TabsTrigger value="tables">Tables</TabsTrigger>
-            <TabsTrigger value="menu">Menu</TabsTrigger>
+            <TabsTrigger value="delivered" className="text-xs sm:text-sm">Delivered</TabsTrigger>
+            {!isMobile && (
+              <>
+                <TabsTrigger value="tables" className="text-xs sm:text-sm">Tables</TabsTrigger>
+                <TabsTrigger value="menu" className="text-xs sm:text-sm">Menu</TabsTrigger>
+              </>
+            )}
           </TabsList>
+
+          {isMobile && (
+            <TabsList className="grid grid-cols-2 mb-3 w-full">
+              <TabsTrigger value="tables" className="text-xs sm:text-sm">Tables</TabsTrigger>
+              <TabsTrigger value="menu" className="text-xs sm:text-sm">Menu</TabsTrigger>
+            </TabsList>
+          )}
 
           <TabsContent value="pending">
             <OrdersList orders={orders} status="PENDING" />
