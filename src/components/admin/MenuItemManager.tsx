@@ -1,4 +1,3 @@
-
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -67,7 +66,7 @@ const MenuItemManager: React.FC<MenuItemManagerProps> = ({
 
   const onSubmit = async (data: z.infer<typeof menuItemFormSchema>) => {
     const newItem: MenuItem = {
-      id: `custom-${Date.now()}`,
+      id: "", // Empty ID, Supabase will generate a UUID
       name: data.name,
       price: parseFloat(data.price),
       category: data.category,

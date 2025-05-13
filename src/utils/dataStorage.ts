@@ -138,10 +138,10 @@ export async function addMenuItem(item: MenuItem): Promise<boolean> {
       };
     }
 
+    // Don't include the ID field, let Supabase generate a proper UUID
     const { error } = await supabase
       .from('menu_items')
       .insert([{
-        id: item.id,
         name: item.name,
         price: priceToStore,
         category: item.category,
@@ -155,7 +155,8 @@ export async function addMenuItem(item: MenuItem): Promise<boolean> {
       return false;
     }
     
-    runtimeCache.menuItems.push(item);
+    // After successful insert, refresh the menu items to get the server-generated ID
+    await fetchMenuItems();
     return true;
   } catch (error) {
     console.error("Error saving menu item:", error);
