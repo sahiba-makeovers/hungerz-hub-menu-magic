@@ -1,10 +1,12 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon, TableData } from '@/types';
 import { toast } from 'sonner';
 import {
-  fetchTables, addTable, deleteTable,
-  fetchMenuItems, addMenuItem, deleteMenuItem,
-  fetchOrders, addOrder,
+  fetchTables, addTable as addTableAPI, deleteTable as deleteTableAPI,
+  fetchMenuItems, addMenuItem as addMenuItemAPI, deleteMenuItem as deleteMenuItemAPI,
+  fetchOrders, addOrder as addOrderAPI, updateOrderStatus as updateOrderStatusAPI,
+  updateOrderPayment as updateOrderPaymentAPI,
   getInitialTables, getInitialMenuItems,
   clearCache, forceRefresh
 } from '@/utils/dataStorage';
@@ -173,10 +175,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       totalAmount: getDiscountedTotal(),
+      paymentStatus: 'UNPAID'
     };
 
     try {
-      await addOrder(newOrder);
+      await addOrderAPI(newOrder);
       setOrders((prev) => [...prev, newOrder]);
       clearCart();
       setDiscount(0);
@@ -190,20 +193,59 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateOrderStatus = async (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => {
     try {
-      const updatedOrders = orders.map(order =>
-        order.id === orderId ? { ...order, status } : order
-      );
-      setOrders(updatedOrders);
-      toast.success(`Order status updated to ${status}`);
+      const success = await updateOrderStatusAPI(orderId, status);
+      
+      if (success) {
+        const updatedOrders = orders.map(order =>
+          order.id === orderId ? { ...order, status } : order
+        );
+        setOrders(updatedOrders);
+        toast.success(`Order status updated to ${status}`);
+      } else {
+        toast.error('Failed to update order status');
+      }
     } catch (error) {
       console.error("Error updating order status:", error);
       toast.error('Failed to update order status. Please try again.');
     }
   };
+  
+  const updateOrderPayment = async (orderId: string, paymentStatus: 'PAID' | 'UNPAID', paymentMethod?: string) => {
+    try {
+      const success = await updateOrderPaymentAPI(orderId, paymentStatus, paymentMethod);
+      
+      if (success) {
+        const updatedOrders = orders.map(order => {
+          if (order.id === orderId) {
+            const updatedOrder = { 
+              ...order, 
+              paymentStatus,
+              paymentMethod: paymentMethod || order.paymentMethod
+            };
+            
+            if (paymentStatus === 'PAID') {
+              updatedOrder.paymentDate = new Date().toISOString();
+            }
+            
+            return updatedOrder;
+          }
+          return order;
+        });
+        
+        setOrders(updatedOrders);
+        toast.success(`Payment status updated to ${paymentStatus}`);
+      } else {
+        toast.error('Failed to update payment status');
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error('Failed to update payment status. Please try again.');
+    }
+  };
 
   const handleAddTable = async (id: number) => {
     try {
-      await addTable(id);
+      await addTableAPI(id);
       await refreshTables();
       toast.success(`Table ${id} added successfully`);
     } catch {
@@ -262,6 +304,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         placeOrder,
         setTableId,
         updateOrderStatus,
+        updateOrderPayment,
         getCartTotal,
         tables,
         setTables,

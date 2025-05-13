@@ -1,7 +1,6 @@
 
 import { MenuItem, Order, TableData } from '@/types';
-
-const BASE_URL = 'http://localhost:5000';
+import { supabase } from '@/integrations/supabase/client';
 
 const runtimeCache = {
   tables: [] as TableData[],
@@ -12,10 +11,23 @@ const runtimeCache = {
 // Tables operations
 export async function fetchTables(): Promise<TableData[]> {
   try {
-    const res = await fetch(`${BASE_URL}/tables`);
-    const data = await res.json();
-    runtimeCache.tables = data;
-    return data;
+    const { data, error } = await supabase
+      .from('tables')
+      .select('*')
+      .order('id');
+      
+    if (error) {
+      console.error("Error fetching tables:", error);
+      return runtimeCache.tables;
+    }
+    
+    // Transform to match the expected TableData structure
+    const formattedData: TableData[] = data.map(table => ({ 
+      id: table.id 
+    }));
+    
+    runtimeCache.tables = formattedData;
+    return formattedData;
   } catch (error) {
     console.error("Error fetching tables:", error);
     return runtimeCache.tables;
@@ -25,11 +37,15 @@ export async function fetchTables(): Promise<TableData[]> {
 export async function addTable(tableId: number): Promise<boolean> {
   try {
     const newTable: TableData = { id: tableId };
-    await fetch(`${BASE_URL}/tables`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTable)
-    });
+    const { error } = await supabase
+      .from('tables')
+      .insert([{ id: tableId }]);
+    
+    if (error) {
+      console.error("Error adding table:", error);
+      return false;
+    }
+    
     runtimeCache.tables.push(newTable);
     return true;
   } catch (error) {
@@ -40,7 +56,16 @@ export async function addTable(tableId: number): Promise<boolean> {
 
 export async function deleteTable(tableId: number): Promise<boolean> {
   try {
-    await fetch(`${BASE_URL}/tables/${tableId}`, { method: 'DELETE' });
+    const { error } = await supabase
+      .from('tables')
+      .delete()
+      .eq('id', tableId);
+    
+    if (error) {
+      console.error("Error deleting table:", error);
+      return false;
+    }
+    
     runtimeCache.tables = runtimeCache.tables.filter(table => table.id !== tableId);
     return true;
   } catch (error) {
@@ -52,10 +77,28 @@ export async function deleteTable(tableId: number): Promise<boolean> {
 // Menu items operations
 export async function fetchMenuItems(): Promise<MenuItem[]> {
   try {
-    const res = await fetch(`${BASE_URL}/menuItems`);
-    const data = await res.json();
-    runtimeCache.menuItems = data;
-    return data;
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*');
+      
+    if (error) {
+      console.error("Error fetching menu items:", error);
+      return runtimeCache.menuItems;
+    }
+    
+    // Transform to match the expected MenuItem structure
+    const formattedData: MenuItem[] = data.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      category: item.category,
+      description: item.description || undefined,
+      image: item.image || undefined,
+      popular: item.popular || false
+    }));
+    
+    runtimeCache.menuItems = formattedData;
+    return formattedData;
   } catch (error) {
     console.error("Error fetching menu items:", error);
     return runtimeCache.menuItems;
@@ -64,11 +107,23 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 
 export async function addMenuItem(item: MenuItem): Promise<boolean> {
   try {
-    await fetch(`${BASE_URL}/menuItems`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item)
-    });
+    const { error } = await supabase
+      .from('menu_items')
+      .insert([{
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        category: item.category,
+        description: item.description,
+        image: item.image,
+        popular: item.popular || false
+      }]);
+    
+    if (error) {
+      console.error("Error saving menu item:", error);
+      return false;
+    }
+    
     runtimeCache.menuItems.push(item);
     return true;
   } catch (error) {
@@ -79,7 +134,16 @@ export async function addMenuItem(item: MenuItem): Promise<boolean> {
 
 export async function deleteMenuItem(id: string): Promise<boolean> {
   try {
-    await fetch(`${BASE_URL}/menuItems/${id}`, { method: 'DELETE' });
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error("Error deleting menu item:", error);
+      return false;
+    }
+    
     runtimeCache.menuItems = runtimeCache.menuItems.filter(item => item.id !== id);
     return true;
   } catch (error) {
@@ -91,10 +155,31 @@ export async function deleteMenuItem(id: string): Promise<boolean> {
 // Orders operations
 export async function fetchOrders(): Promise<Order[]> {
   try {
-    const res = await fetch(`${BASE_URL}/orders`);
-    const data = await res.json();
-    runtimeCache.orders = data;
-    return data;
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error("Error fetching orders:", error);
+      return runtimeCache.orders;
+    }
+    
+    // Transform to match the expected Order structure
+    const formattedData: Order[] = data.map(order => ({
+      id: order.id,
+      tableId: order.table_id,
+      items: order.items,
+      status: order.status as 'PENDING' | 'COOKING' | 'DELIVERED',
+      createdAt: order.created_at,
+      totalAmount: Number(order.total_amount),
+      paymentStatus: order.payment_status as 'PAID' | 'UNPAID' | undefined,
+      paymentMethod: order.payment_method,
+      paymentDate: order.payment_date
+    }));
+    
+    runtimeCache.orders = formattedData;
+    return formattedData;
   } catch (error) {
     console.error("Error fetching orders:", error);
     return runtimeCache.orders;
@@ -103,15 +188,101 @@ export async function fetchOrders(): Promise<Order[]> {
 
 export async function addOrder(order: Order): Promise<boolean> {
   try {
-    await fetch(`${BASE_URL}/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
-    });
+    const { error } = await supabase
+      .from('orders')
+      .insert([{
+        id: order.id,
+        table_id: order.tableId,
+        items: order.items,
+        status: order.status,
+        total_amount: order.totalAmount,
+        payment_status: order.paymentStatus || 'UNPAID',
+        payment_method: order.paymentMethod,
+        payment_date: order.paymentDate
+      }]);
+    
+    if (error) {
+      console.error("Error saving order:", error);
+      return false;
+    }
+    
     runtimeCache.orders.push(order);
     return true;
   } catch (error) {
     console.error("Error saving order:", error);
+    return false;
+  }
+}
+
+// Update order status
+export async function updateOrderStatus(orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED'): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', orderId);
+      
+    if (error) {
+      console.error("Error updating order status:", error);
+      return false;
+    }
+    
+    // Update local cache
+    const orderIndex = runtimeCache.orders.findIndex(order => order.id === orderId);
+    if (orderIndex !== -1) {
+      runtimeCache.orders[orderIndex].status = status;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    return false;
+  }
+}
+
+// Update order payment
+export async function updateOrderPayment(
+  orderId: string, 
+  paymentStatus: 'PAID' | 'UNPAID',
+  paymentMethod?: string
+): Promise<boolean> {
+  try {
+    const updateData: any = { 
+      payment_status: paymentStatus 
+    };
+    
+    if (paymentStatus === 'PAID') {
+      updateData.payment_date = new Date().toISOString();
+      if (paymentMethod) {
+        updateData.payment_method = paymentMethod;
+      }
+    }
+    
+    const { error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
+      
+    if (error) {
+      console.error("Error updating payment status:", error);
+      return false;
+    }
+    
+    // Update local cache
+    const orderIndex = runtimeCache.orders.findIndex(order => order.id === orderId);
+    if (orderIndex !== -1) {
+      runtimeCache.orders[orderIndex].paymentStatus = paymentStatus;
+      if (paymentMethod) {
+        runtimeCache.orders[orderIndex].paymentMethod = paymentMethod;
+      }
+      if (paymentStatus === 'PAID') {
+        runtimeCache.orders[orderIndex].paymentDate = new Date().toISOString();
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
     return false;
   }
 }

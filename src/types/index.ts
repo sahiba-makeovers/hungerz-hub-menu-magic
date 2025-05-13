@@ -33,6 +33,9 @@ export interface Order {
   status: 'PENDING' | 'COOKING' | 'DELIVERED';
   createdAt: string;
   totalAmount: number;
+  paymentStatus?: 'PAID' | 'UNPAID';
+  paymentMethod?: string;
+  paymentDate?: string;
 }
 
 export interface Coupon {
@@ -67,6 +70,7 @@ export interface OrderContextType {
   deleteMenuItem: (itemId: string) => Promise<void>;
 
   updateOrderStatus: (orderId: string, status: 'PENDING' | 'COOKING' | 'DELIVERED') => Promise<void>;
+  updateOrderPayment: (orderId: string, paymentStatus: 'PAID' | 'UNPAID', paymentMethod?: string) => Promise<void>;
 
   applyCoupon: (code: string) => { success: boolean; message: string };
 
