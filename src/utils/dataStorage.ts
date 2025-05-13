@@ -1,6 +1,7 @@
 
 import { MenuItem, Order, TableData } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 const runtimeCache = {
   tables: [] as TableData[],
@@ -90,12 +91,15 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     const formattedData: MenuItem[] = data.map(item => {
       // Handle price based on whether it's a number or an object with half/full
       let price: number | { half: number; full: number };
+      
       if (typeof item.price === 'number') {
         price = item.price;
-      } else if (typeof item.price === 'object' && item.price !== null) {
+      } else if (item.price && typeof item.price === 'object') {
+        // Safely access properties with type checking
+        const priceObj = item.price as { [key: string]: any };
         price = {
-          half: item.price.half ? Number(item.price.half) : 0,
-          full: item.price.full ? Number(item.price.full) : 0
+          half: priceObj.half ? Number(priceObj.half) : 0,
+          full: priceObj.full ? Number(priceObj.full) : 0
         };
       } else {
         // Default to 0 if price is not set properly
@@ -195,14 +199,14 @@ export async function fetchOrders(): Promise<Order[]> {
     // Transform to match the expected Order structure
     const formattedData: Order[] = data.map(order => {
       // Parse items from JSON to CartItem array
-      const items = typeof order.items === 'string' 
+      const itemsData = typeof order.items === 'string' 
         ? JSON.parse(order.items) 
         : order.items;
 
       return {
         id: order.id,
         tableId: order.table_id,
-        items: items,
+        items: Array.isArray(itemsData) ? itemsData : [],
         status: order.status as 'PENDING' | 'COOKING' | 'DELIVERED',
         createdAt: order.created_at,
         totalAmount: Number(order.total_amount),
@@ -222,11 +226,11 @@ export async function fetchOrders(): Promise<Order[]> {
 
 export async function addOrder(order: Order): Promise<boolean> {
   try {
-    // Convert the order to the format expected by Supabase
+    // We need to stringify the items to make sure they're stored properly in the JSON field
     const orderData = {
       id: order.id,
       table_id: order.tableId,
-      items: order.items,
+      items: JSON.stringify(order.items),
       status: order.status,
       total_amount: order.totalAmount,
       payment_status: order.paymentStatus || 'UNPAID',
