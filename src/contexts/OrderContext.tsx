@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { CartItem, MenuItem, Order, OrderContextType, Coupon, TableData } from '@/types';
 import { toast } from 'sonner';
@@ -255,7 +254,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleDeleteTable = async (id: number) => {
     try {
-      await deleteTable(id);
+      await deleteTableAPI(id);
       await refreshTables();
       toast.success(`Table ${id} removed successfully`);
     } catch {
@@ -265,7 +264,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleAddMenuItem = async (item: MenuItem) => {
     try {
-      await addMenuItem(item);
+      await addMenuItemAPI(item);
       await refreshMenuItems();
       toast.success(`${item.name} added to menu`);
     } catch {
@@ -275,7 +274,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleDeleteMenuItem = async (id: string) => {
     try {
-      await deleteMenuItem(id);
+      await deleteMenuItemAPI(id);
       await refreshMenuItems();
       toast.success(`Menu item removed successfully`);
     } catch {

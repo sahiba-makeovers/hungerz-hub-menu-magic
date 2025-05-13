@@ -87,15 +87,31 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
     }
     
     // Transform to match the expected MenuItem structure
-    const formattedData: MenuItem[] = data.map(item => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      category: item.category,
-      description: item.description || undefined,
-      image: item.image || undefined,
-      popular: item.popular || false
-    }));
+    const formattedData: MenuItem[] = data.map(item => {
+      // Handle price based on whether it's a number or an object with half/full
+      let price: number | { half: number; full: number };
+      if (typeof item.price === 'number') {
+        price = item.price;
+      } else if (typeof item.price === 'object' && item.price !== null) {
+        price = {
+          half: item.price.half ? Number(item.price.half) : 0,
+          full: item.price.full ? Number(item.price.full) : 0
+        };
+      } else {
+        // Default to 0 if price is not set properly
+        price = 0;
+      }
+
+      return {
+        id: item.id,
+        name: item.name,
+        price: price,
+        category: item.category,
+        description: item.description || undefined,
+        image: item.image || undefined,
+        popular: item.popular || false
+      };
+    });
     
     runtimeCache.menuItems = formattedData;
     return formattedData;
@@ -107,12 +123,23 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 
 export async function addMenuItem(item: MenuItem): Promise<boolean> {
   try {
+    // Transform the price to store in Supabase
+    let priceToStore;
+    if (typeof item.price === 'number') {
+      priceToStore = item.price;
+    } else {
+      priceToStore = {
+        half: item.price.half,
+        full: item.price.full
+      };
+    }
+
     const { error } = await supabase
       .from('menu_items')
       .insert([{
         id: item.id,
         name: item.name,
-        price: item.price,
+        price: priceToStore,
         category: item.category,
         description: item.description,
         image: item.image,
@@ -166,17 +193,24 @@ export async function fetchOrders(): Promise<Order[]> {
     }
     
     // Transform to match the expected Order structure
-    const formattedData: Order[] = data.map(order => ({
-      id: order.id,
-      tableId: order.table_id,
-      items: order.items,
-      status: order.status as 'PENDING' | 'COOKING' | 'DELIVERED',
-      createdAt: order.created_at,
-      totalAmount: Number(order.total_amount),
-      paymentStatus: order.payment_status as 'PAID' | 'UNPAID' | undefined,
-      paymentMethod: order.payment_method,
-      paymentDate: order.payment_date
-    }));
+    const formattedData: Order[] = data.map(order => {
+      // Parse items from JSON to CartItem array
+      const items = typeof order.items === 'string' 
+        ? JSON.parse(order.items) 
+        : order.items;
+
+      return {
+        id: order.id,
+        tableId: order.table_id,
+        items: items,
+        status: order.status as 'PENDING' | 'COOKING' | 'DELIVERED',
+        createdAt: order.created_at,
+        totalAmount: Number(order.total_amount),
+        paymentStatus: (order.payment_status || 'UNPAID') as 'PAID' | 'UNPAID',
+        paymentMethod: order.payment_method,
+        paymentDate: order.payment_date
+      };
+    });
     
     runtimeCache.orders = formattedData;
     return formattedData;
@@ -188,18 +222,21 @@ export async function fetchOrders(): Promise<Order[]> {
 
 export async function addOrder(order: Order): Promise<boolean> {
   try {
+    // Convert the order to the format expected by Supabase
+    const orderData = {
+      id: order.id,
+      table_id: order.tableId,
+      items: order.items,
+      status: order.status,
+      total_amount: order.totalAmount,
+      payment_status: order.paymentStatus || 'UNPAID',
+      payment_method: order.paymentMethod,
+      payment_date: order.paymentDate
+    };
+
     const { error } = await supabase
       .from('orders')
-      .insert([{
-        id: order.id,
-        table_id: order.tableId,
-        items: order.items,
-        status: order.status,
-        total_amount: order.totalAmount,
-        payment_status: order.paymentStatus || 'UNPAID',
-        payment_method: order.paymentMethod,
-        payment_date: order.paymentDate
-      }]);
+      .insert([orderData]);
     
     if (error) {
       console.error("Error saving order:", error);

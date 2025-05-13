@@ -47,6 +47,9 @@ export type Database = {
           created_at: string
           id: string
           items: Json
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
           status: string
           table_id: number
           total_amount: number
@@ -55,6 +58,9 @@ export type Database = {
           created_at?: string
           id: string
           items: Json
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status: string
           table_id: number
           total_amount: number
@@ -63,6 +69,9 @@ export type Database = {
           created_at?: string
           id?: string
           items?: Json
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status?: string
           table_id?: number
           total_amount?: number
@@ -94,7 +103,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      order_history: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          items: Json | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string | null
+          table_id: number | null
+          total_amount: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          items?: Json | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string | null
+          table_id?: number | null
+          total_amount?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          items?: Json | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string | null
+          table_id?: number | null
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
